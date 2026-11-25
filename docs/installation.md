@@ -8,8 +8,10 @@ Every project gets two layers of protection:
 2. **A pull request check** in CI (`ngcheck secrets`) that scans every commit of the
    pull request. This is the enforcement: make it a required check.
 
-Pick the hook setup matching the project's tooling, then add the CI check.
+`ngcheck init` sets up both.
 
+- [Quick start](#quick-start)
+- [What ngcheck init does](#what-ngcheck-init-does)
 - [Symfony / PHP projects (Composer + CaptainHook)](#symfony--php-projects-composer--captainhook)
 - [Node projects (npm, Yarn or pnpm + Husky)](#node-projects-npm-yarn-or-pnpm--husky)
 - [CI pipelines](#ci-pipelines)
@@ -19,43 +21,93 @@ Pick the hook setup matching the project's tooling, then add the CI check.
 
 Supported platforms: macOS and Linux, x64 and arm64. On Windows, use WSL.
 
+## Quick start
+
+**Symfony / PHP project:**
+
+```sh
+composer require --dev netgen/ngcheck
+```
+
+Answer `y` when Composer asks whether to trust `netgen/ngcheck`. The plugin then
+downloads ngcheck and runs `ngcheck init`.
+
+**Node project:**
+
+```sh
+npm install --save-dev @netgen/ngcheck
+npm exec -- ngcheck init
+```
+
+Then, in both cases:
+
+1. Do what `ngcheck init` lists as `todo` (e.g. add the step to a Bitbucket or GitLab pipeline).
+2. Commit the files it lists, with `composer.json` and `composer.lock` / `package.json` and
+   the npm lock file.
+3. Check for secrets committed before: see [Adopting an existing project](#adopting-an-existing-project).
+
+New projects created from `netgen/media-site` are already set up.
+
+## What ngcheck init does
+
+```console
+$ vendor/bin/ngcheck init
+Setting up ngcheck in /var/www/project
+
+changed  captainhook.json: added "vendor/bin/ngcheck secrets --staged" to the pre-commit hook
+changed  .github/workflows/secrets.yml: created the pull request check
+
+Review and commit the changes:
+
+    git add captainhook.json .github/workflows/secrets.yml
+```
+
+| It finds | It does |
+|---|---|
+| `captainhook.json`, `captainhook.template.json` | adds the `vendor/bin/ngcheck secrets --staged` action at the top of the `pre-commit` hook and enables the hook; the rest of the file stays as it is |
+| CaptainHook installed (`vendor/bin/captainhook`) but no `captainhook.json` | creates `captainhook.json` with the action |
+| CaptainHook git hooks not installed in the clone | tells you to run `vendor/bin/captainhook install --force` |
+| `.husky/` | adds `ngcheck secrets --staged` at the top of `.husky/pre-commit` (`yarn ngcheck ...` with Yarn Plug'n'Play) |
+| Husky not active in the clone | tells you to run `npx husky` |
+| no hook manager | tells you how to install CaptainHook (PHP) or Husky (Node) and to run `ngcheck init` again |
+| `.github/workflows/` or a GitHub `origin` remote | creates `.github/workflows/secrets.yml`, unless a workflow already runs ngcheck |
+| `bitbucket-pipelines.yml` or a Bitbucket `origin` remote | prints the step to add (it does not edit existing pipelines) |
+| `.gitlab-ci.yml` or a GitLab `origin` remote | prints the job to add |
+
+It changes nothing that is already set up, so it is safe to run again, e.g. after
+setting up Husky or a pipeline.
+
 ## Symfony / PHP projects (Composer + CaptainHook)
 
 The Composer package `netgen/ngcheck` is a Composer plugin: after `composer install`
 and `composer update` it downloads the ngcheck binaries of its version for the current
 platform (verified against the release checksums) and exposes them as `vendor/bin/ngcheck`.
+When `composer require` adds it to the project in an interactive terminal, it also runs
+`ngcheck init`. It never runs `init` on `composer install`, so a hook removed on purpose
+does not come back.
 
-1. Allow the plugin, otherwise Composer refuses to run it (non-interactive) or asks:
+Composer only runs plugins listed in `config.allow-plugins` of `composer.json`. An
+interactive `composer require` asks and adds it. For non-interactive installs (scripts,
+CI), allow it first and run `init` yourself:
 
-   ```sh
-   composer config allow-plugins.netgen/ngcheck true
-   ```
+```sh
+composer config allow-plugins.netgen/ngcheck true
+composer require --dev --no-interaction netgen/ngcheck
+vendor/bin/ngcheck init
+```
 
-2. Require the package:
+The hook `ngcheck init` configures, for reference:
 
-   ```sh
-   composer require --dev netgen/ngcheck
-   ```
-
-3. Add the action to the `pre-commit` hook in `captainhook.json` (and in
-   `captainhook.template.json` if the project has one), before slower actions such as
-   PHPStan:
-
-   ```json
-   "pre-commit": {
-       "enabled": true,
-       "actions": [
-           {
-               "action": "vendor/bin/ngcheck secrets --staged"
-           }
-       ]
-   }
-   ```
-
-4. Commit `composer.json`, `composer.lock` and `captainhook.json`.
-
-New projects created from `netgen/media-site` get both the plugin permission and the
-action from its `composer.json` and `captainhook.template.json`.
+```json
+"pre-commit": {
+    "enabled": true,
+    "actions": [
+        {
+            "action": "vendor/bin/ngcheck secrets --staged"
+        }
+    ]
+}
+```
 
 ### Development containers
 
@@ -73,38 +125,23 @@ vendor/bin/ngcheck secrets --history  # every commit of every branch
 
 ## Node projects (npm, Yarn or pnpm + Husky)
 
-The npm package `@netgen/ngcheck` has no install scripts. Its binaries come in one
-package per platform (`@netgen/ngcheck-darwin-arm64`, `-darwin-x64`, `-linux-arm64`,
-`-linux-x64`), declared as optional dependencies: the package manager installs only
-the one matching the machine.
+The npm package `@netgen/ngcheck` has no install scripts, so installing it cannot set up
+the project: run `ngcheck init` once after installing it.
 
-1. Install it:
+```sh
+npm install --save-dev @netgen/ngcheck && npm exec -- ngcheck init
+yarn add --dev @netgen/ngcheck && yarn ngcheck init
+pnpm add --save-dev @netgen/ngcheck && pnpm ngcheck init
+```
 
-   ```sh
-   npm install --save-dev @netgen/ngcheck
-   # or: yarn add --dev @netgen/ngcheck
-   # or: pnpm add --save-dev @netgen/ngcheck
-   ```
+If the project does not use [Husky](https://typicode.github.io/husky/) yet, `init` says
+so: run `npm install --save-dev husky && npx husky init`, then `init` again. Husky's
+default `.husky/pre-commit` runs `npm test`; keep or remove that line as needed.
 
-2. Set up [Husky](https://typicode.github.io/husky/) if the project does not use it yet:
-
-   ```sh
-   npx husky init
-   ```
-
-3. Add ngcheck to `.husky/pre-commit`, before other commands such as lint-staged
-   (Husky puts `node_modules/.bin` on the `PATH`):
-
-   ```sh
-   ngcheck secrets --staged
-   ```
-
-   With Yarn Plug'n'Play (no `node_modules`), use `yarn ngcheck secrets --staged`.
-
-4. Commit `package.json`, the lock file and `.husky/pre-commit`.
-
-Optional dependencies must stay enabled: do not install with `--omit=optional` /
-`--no-optional`.
+The binaries come in one package per platform (`@netgen/ngcheck-darwin-arm64`,
+`-darwin-x64`, `-linux-arm64`, `-linux-x64`), declared as optional dependencies: the
+package manager installs only the one matching the machine. Optional dependencies must
+stay enabled: do not install with `--omit=optional` / `--no-optional`.
 
 Manual scans: `npm exec -- ngcheck secrets --history` (or `yarn ngcheck`, `pnpm ngcheck`).
 
@@ -114,6 +151,9 @@ Use one hook manager. Symfony projects with a frontend build keep CaptainHook an
 Composer package; there is no need to also install the npm package.
 
 ## CI pipelines
+
+`ngcheck init` creates the GitHub Actions workflow and prints the Bitbucket Pipelines and
+GitLab CI steps; they are repeated below for reference.
 
 The `ghcr.io/netgen/ngcheck` image contains ngcheck, Betterleaks and git. Use the
 major version tag (`:1`) to get ruleset updates automatically, or an exact version

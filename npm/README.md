@@ -6,13 +6,11 @@ repository for leaked secrets (passwords, API keys, tokens, private keys...) wit
 
 ```sh
 npm install --save-dev @netgen/ngcheck
+npm exec -- ngcheck init
 ```
 
-`.husky/pre-commit`:
-
-```sh
-npx --no-install ngcheck secrets --staged
-```
+`ngcheck init` adds `ngcheck secrets --staged` to `.husky/pre-commit` and sets up the
+pull request check in CI.
 
 The package contains no install scripts: npm installs the binary for your platform
 from one of the `@netgen/ngcheck-<os>-<arch>` optional dependencies.

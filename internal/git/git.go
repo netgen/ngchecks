@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -71,6 +72,41 @@ func (r *Repository) Unshallow() bool {
 	_, err := run(r.Root, "fetch", "--unshallow", "--no-tags", "origin")
 
 	return err == nil
+}
+
+// Config returns a git config value, or "" if it is not set.
+func (r *Repository) Config(key string) string {
+	output, err := run(r.Root, "config", "--get", key)
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(output)
+}
+
+// HooksDir returns the absolute path of the directory git runs hooks from.
+func (r *Repository) HooksDir() (string, error) {
+	output, err := run(r.Root, "rev-parse", "--git-path", "hooks")
+	if err != nil {
+		return "", err
+	}
+
+	path := strings.TrimSpace(output)
+	if !filepath.IsAbs(path) {
+		path = filepath.Join(r.Root, path)
+	}
+
+	return path, nil
+}
+
+// RemoteURL returns the URL of a remote, or "" if it does not exist.
+func (r *Repository) RemoteURL(name string) string {
+	output, err := run(r.Root, "remote", "get-url", name)
+	if err != nil {
+		return ""
+	}
+
+	return strings.TrimSpace(output)
 }
 
 // TrackedFiles returns the paths (slash separated, relative to the root) of

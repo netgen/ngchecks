@@ -18,11 +18,12 @@ const (
 const usage = `ngcheck - Netgen project checks
 
 Usage:
+  ngcheck init [path]                Set up the git hook and CI check of a project
   ngcheck secrets [options] [path]   Scan a git repository for leaked secrets
   ngcheck version                    Show the ngcheck and Betterleaks versions
   ngcheck help                       Show this help
 
-Run "ngcheck secrets --help" for the options of a check.
+Run "ngcheck <command> --help" for the options of a command.
 Exit codes: 0 passed, 1 problems found, 2 error.
 `
 
@@ -34,6 +35,8 @@ func Run(args []string, stdout, stderr io.Writer, getenv func(string) string, ve
 	}
 
 	switch args[0] {
+	case "init":
+		return runInit(args[1:], stdout, stderr)
 	case "secrets":
 		return runSecrets(args[1:], stdout, stderr, getenv)
 	case "version", "--version":

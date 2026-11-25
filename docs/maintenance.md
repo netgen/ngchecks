@@ -35,6 +35,10 @@ How each package gets the binaries:
   `vendor/netgen/ngcheck/var/<os>_<arch>/`, after checking it against the release's
   `checksums.txt`. That's why the GitHub release is created together with the tag:
   Packagist can't offer a version before its binaries exist.
+  After `composer require` / `composer update` in an interactive terminal, when the package
+  was not in `vendor/` before (not listed in `vendor/composer/installed.json` when the plugin
+  is activated), the plugin also runs `ngcheck init`. It never does on `composer install`,
+  so a fresh clone or a CI install never changes project files.
 - **npm**: `@netgen/ngcheck` contains a small Node launcher (`npm/bin/ngcheck.js`) and lists
   the four platform packages as optional dependencies, which the package managers
   install only for the matching `os`/`cpu`. No install scripts are involved, so it works
@@ -44,6 +48,8 @@ How each package gets the binaries:
 
 Projects run it from their hook managers with the same command: a CaptainHook action
 `vendor/bin/ngcheck secrets --staged`, or `ngcheck secrets --staged` in `.husky/pre-commit`.
+`ngcheck init` (`internal/setup/`) writes these and the GitHub Actions workflow, and prints
+the Bitbucket and GitLab steps.
 
 ## One-time setup
 
@@ -235,9 +241,12 @@ Testing the distributions without publishing:
 
 - **Composer**: serve the `dist/` archives in a `v<version>/` directory over HTTP, require the
   package from a [path repository](https://getcomposer.org/doc/05-repositories.md#path) with
-  `"versions": {"netgen/ngcheck": "<version>"}`, and run `composer install` with
+  `"versions": {"netgen/ngcheck": "<version>"}`, and run `composer require` with
   `NGCHECK_DOWNLOAD_URL=http://<host>` (set `config.secure-http` to `false` for plain HTTP).
   `NGCHECK_VERSION` makes the plugin download another release, e.g. for a development version.
+  The plugin only runs `ngcheck init` in an interactive terminal; from a script, use
+  `printf 'y\n' | script -qec "composer require --dev netgen/ngcheck:<version>" /dev/null`
+  (Linux `script`) to get one and answer the trust prompt.
 - **npm**: publish `dist/npm/*` to a local registry such as
   [Verdaccio](https://verdaccio.org) (raise its `max_body_size`, the platform packages are
   about 11 MB) and install from it with `--registry`.
@@ -249,6 +258,7 @@ Testing the distributions without publishing:
 | `cmd/ngcheck/` | entry point |
 | `internal/cli/` | command line parsing and output |
 | `internal/secrets/` | the secrets scan: Betterleaks invocation, config composition, ignore file, suppressions |
+| `internal/setup/` | `ngcheck init`: CaptainHook / Husky hooks and CI pipelines of a project |
 | `internal/git/`, `internal/ci/`, `internal/report/` | git commands, CI platform detection, JUnit / JSON / GitHub annotation output |
 | `internal/betterleaks/` | locating the bundled Betterleaks binary |
 | `ruleset/betterleaks.toml` | the Netgen ruleset, embedded in the binary |

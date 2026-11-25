@@ -194,3 +194,28 @@ func TestVersion(t *testing.T) {
 	}
 	assertContains(t, r.stdout, "ngcheck 1.2.3\nbetterleaks ")
 }
+
+func TestInit(t *testing.T) {
+	repo := testutil.NewRepo(t)
+	repo.Write(".husky/pre-commit", "npm test\n").Write(".github/workflows/ci.yml", "name: CI\n")
+
+	r := run(t, nil, "init", repo.Root)
+
+	if r.exitCode != cli.ExitOK {
+		t.Fatalf("expected exit code 0, got %d\n%s%s", r.exitCode, r.stdout, r.stderr)
+	}
+	assertContains(t, r.stdout,
+		"Setting up ngcheck in "+repo.Root,
+		`changed  .husky/pre-commit: added "ngcheck secrets --staged"`,
+		"changed  .github/workflows/secrets.yml: created the pull request check",
+		"todo     Husky is not active in this clone",
+		"\n    npx husky\n",
+		"git add .husky/pre-commit .github/workflows/secrets.yml",
+	)
+
+	r = run(t, nil, "init", repo.Root)
+	assertContains(t, r.stdout, "ok       .husky/pre-commit: already runs ngcheck")
+	if strings.Contains(r.stdout, "git add") {
+		t.Errorf("nothing should change on the second run:\n%s", r.stdout)
+	}
+}

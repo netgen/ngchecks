@@ -26,9 +26,9 @@ to maintain.
 
 | Used by | Package | Install |
 |---|---|---|
-| Symfony / PHP projects, CaptainHook | [`netgen/ngcheck`](https://packagist.org/packages/netgen/ngcheck) on Packagist | `composer require --dev netgen/ngcheck` |
-| Node projects, Husky | [`@netgen/ngcheck`](https://www.npmjs.com/package/@netgen/ngcheck) on npm | `npm install --save-dev @netgen/ngcheck` |
-| CI pipelines (GitHub, Bitbucket, GitLab) | `ghcr.io/netgen/ngcheck` Docker image | `image: ghcr.io/netgen/ngcheck:1` |
+| Symfony / PHP projects, CaptainHook | [`netgen/ngcheck`](https://packagist.org/packages/netgen/ngcheck) on Packagist | `composer require --dev netgen/ngcheck` (sets the project up) |
+| Node projects, Husky | [`@netgen/ngcheck`](https://www.npmjs.com/package/@netgen/ngcheck) on npm | `npm install --save-dev @netgen/ngcheck && npm exec -- ngcheck init` |
+| CI pipelines (GitHub, Bitbucket, GitLab) | `ghcr.io/netgen/ngcheck` Docker image | `image: ghcr.io/netgen/ngcheck:1`, set up by `ngcheck init` |
 
 Each distribution ships the same two binaries: `ngcheck` (Go, this repository) and
 the pinned Betterleaks release it runs. The ruleset is embedded in `ngcheck`.
@@ -51,6 +51,11 @@ flowchart LR
 ## Usage
 
 ```
+ngcheck init [path]
+
+  adds the pre-commit hook (CaptainHook or Husky) and the pull request check
+  (GitHub Actions; prints the Bitbucket Pipelines / GitLab CI step) to the project
+
 ngcheck secrets [options] [path]
 
   --staged        scan the changes staged for commit (pre-commit hook)

@@ -59,27 +59,30 @@ final class BinaryInstaller
         $this->filesystem = new Filesystem();
     }
 
-    public function install(PackageInterface $package): void
+    /**
+     * Returns the path of the installed ngcheck binary, or null if it could not be installed.
+     */
+    public function install(PackageInterface $package): ?string
     {
         $platform = self::currentPlatform();
 
         if ($platform === null) {
             $this->io->writeError(sprintf('<warning>netgen/ngcheck: %s %s is not supported, vendor/bin/ngcheck will not work.</warning>', PHP_OS_FAMILY, php_uname('m')));
 
-            return;
+            return null;
         }
 
         $version = $this->releaseVersion($package);
 
         if ($version === null) {
-            return;
+            return null;
         }
 
         $directory = sprintf('%s/var/%s', $this->packagePath, $platform);
         $marker = $directory . '/.version';
 
         if (is_file($marker) && trim((string) file_get_contents($marker)) === $version && is_executable($directory . '/ngcheck')) {
-            return;
+            return $directory . '/ngcheck';
         }
 
         $this->io->write(sprintf('<info>netgen/ngcheck: installing ngcheck %s (%s)</info>', $version, $platform));
@@ -121,6 +124,8 @@ final class BinaryInstaller
         } finally {
             $this->filesystem->removeDirectory($workDirectory);
         }
+
+        return $directory . '/ngcheck';
     }
 
     /**
