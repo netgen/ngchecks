@@ -53,11 +53,24 @@ the Bitbucket and GitLab steps.
 
 ## One-time setup
 
-Done once, by someone with admin rights on the Netgen GitHub, Packagist and npm accounts.
+No credentials are stored in GitHub. Each service authenticates the release workflow
+on its own:
+
+| Service | Secret in GitHub | How publishing is authorized |
+|---|---|---|
+| GitHub release and tag | none | the workflow's automatic `GITHUB_TOKEN` (`contents: write`) |
+| ghcr.io Docker image | none | the workflow's automatic `GITHUB_TOKEN` (`packages: write`) |
+| Packagist | none | Packagist reads the public repository itself; a GitHub webhook tells it about new tags |
+| npm | none | [trusted publishing](https://docs.npmjs.com/trusted-publishers): each npm package trusts the `release.yml` workflow of `netgen/ngcheck` (OIDC, `id-token: write`) |
+
+npm trusted publishing can only be configured for packages that already exist, so the
+first npm release is published by hand (step 5). npm no longer offers long-lived tokens
+that could do this from CI instead: tokens that skip 2FA lose direct publishing in 2027.
 
 ### 1. GitHub repository
 
-1. Create the repository `netgen/ngcheck` (public) and push:
+1. Create the repository `netgen/ngcheck` (public; Packagist and npm provenance need a
+   public repository) and push:
 
    ```sh
    git remote add origin git@github.com:netgen/ngcheck.git
@@ -65,33 +78,35 @@ Done once, by someone with admin rights on the Netgen GitHub, Packagist and npm 
    ```
 
 2. Settings → Actions → General → Workflow permissions: the workflows declare the
-   permissions they need per job (`contents: write`, `packages: write`, `id-token: write`).
-   Make sure the organization policy does not cap them at read-only.
+   permissions they need per job (`contents: write`, `packages: write`, `id-token: write`),
+   which works with the default "Read repository contents" setting. Check that the
+   organization allows members to create public packages (organization Settings →
+   Packages), for the Docker image.
 3. Protect `master` and make the CI checks required.
 
 ### 2. Packagist
 
-1. Log in to [packagist.org](https://packagist.org) with the Netgen maintainer account
-   and submit `https://github.com/netgen/ngcheck`.
-2. On the package page, check that it says it is auto-updated. If not, connect the
-   Packagist account to GitHub (Profile → GitHub sync), or add the webhook described on
-   the profile page to the repository.
+The `netgen` vendor name is protected on Packagist: only maintainers of an existing
+`netgen/*` package can submit packages under it.
 
-### 3. npm
+1. Log in to [packagist.org](https://packagist.org) with such an account, preferably
+   through GitHub ("Login with GitHub"), and submit `https://github.com/netgen/ngcheck`.
+2. Make Packagist update on every push, so a release is available within a minute:
+   - with a GitHub login: make sure the Packagist application has access to the
+     `netgen` organization (GitHub → Settings → Applications → Authorized OAuth Apps →
+     Packagist), then use "trigger a manual account sync" on Packagist;
+   - or add the webhook by hand: repository Settings → Webhooks → Add webhook, Payload URL
+     `https://packagist.org/api/github?username=<packagist username>`, Content type
+     `application/json`, Secret: the API token from the Packagist profile page, event
+     "Just the push event".
+3. The package page must not show a warning about not being auto-updated.
+4. Add the other maintainers on the package page.
 
-The `@netgen` npm organization already exists.
+### 3. npm account
 
-1. On npmjs.com, as an owner of `@netgen`, create a granular access token with
-   read/write access to the `@netgen` packages (the `@netgen/ngcheck*` packages don't
-   exist before the first release, so it has to cover the scope) and "bypass two-factor
-   authentication" enabled, so CI can publish.
-2. Add it to the repository: Settings → Secrets and variables → Actions → New repository
-   secret `NPM_TOKEN`.
-
-Optional hardening after the first release: configure
-[trusted publishing](https://docs.npmjs.com/trusted-publishers) for each of the five
-packages (repository `netgen/ngcheck`, workflow `release.yml`), then remove `NPM_TOKEN`
-and the `NODE_AUTH_TOKEN` line in `release.yml`.
+Publishing the first version by hand (step 5) needs an npm account that is a member
+of the `@netgen` organization, allowed to publish packages in it, and with two-factor
+authentication enabled. Nothing is configured in GitHub.
 
 ### 4. Docker image visibility
 
@@ -99,15 +114,40 @@ The first release creates the `ngcheck` container package in the `netgen` organi
 private by default. On GitHub: organization → Packages → `ngcheck` → Package settings →
 Change visibility → Public. Pipelines on Bitbucket and GitLab pull it without credentials.
 
-### 5. First release
+### 5. First release and npm trusted publishing
 
-1. Release `1.0.0-rc.1` (see below) and try it on one Symfony and one Node project,
-   following [installation.md](installation.md). Composer installs pre-releases with
+1. Release `1.0.0-rc.1` with the Release workflow (see [Releasing](#releasing)). The GitHub
+   release, Packagist and Docker work; the npm job fails, because the packages don't exist yet.
+2. Publish the npm packages of that release by hand, from the release archives:
+
+   ```sh
+   gh release download v1.0.0-rc.1 --repo netgen/ngcheck --dir dist
+   scripts/build-npm.sh 1.0.0-rc.1
+   npm login
+   for package in dist/npm/ngcheck-* dist/npm/ngcheck; do
+       npm publish "$package" --access public --tag next   # asks for a 2FA code
+   done
+   ```
+
+   The platform packages go first, `dist/npm/ngcheck` (the launcher) last.
+3. For each of the five packages (`@netgen/ngcheck`, `@netgen/ngcheck-darwin-arm64`,
+   `-darwin-x64`, `-linux-arm64`, `-linux-x64`): npmjs.com → the package → Settings →
+   Trusted publishing → GitHub Actions, with organization `netgen`, repository `ngcheck`,
+   workflow filename `release.yml`, no environment, and allow `npm publish`.
+4. Within 2 days (npm expires trusted publisher configurations that were never used),
+   release the next version, e.g. `1.0.0-rc.2` or `1.0.0`, and check that the npm job
+   publishes all packages. If a configuration expired, delete it, add it again and release.
+5. Recommended: in the same package settings, Publishing access → "Require two-factor
+   authentication and disallow tokens", so only the workflow and 2FA-authenticated
+   maintainers can publish.
+6. Try the release candidate on one Symfony and one Node project, following
+   [installation.md](installation.md). Composer installs pre-releases with
    `composer require --dev netgen/ngcheck:^1.0@rc`, npm with `@netgen/ngcheck@next`.
-2. Release `1.0.0`.
-3. Add `netgen/ngcheck` (`require-dev`) and `"netgen/ngcheck": true` (`config.allow-plugins`)
+7. Release `1.0.0`.
+8. Add `netgen/ngcheck` (`require-dev`) and `"netgen/ngcheck": true` (`config.allow-plugins`)
    to `composer.json` in `netgen/media-site`, and the `vendor/bin/ngcheck secrets --staged`
-   action to the `pre-commit` hook in its `captainhook.template.json`, so new projects get it.
+   action to the `pre-commit` hook in its `captainhook.template.json` (running
+   `vendor/bin/ngcheck init` there does it), so new projects get it.
 
 ## Releasing
 
@@ -140,8 +180,10 @@ If a release job fails:
 
 - **GitHub release job**: nothing was published, fix the problem and run the workflow again.
 - **Docker or npm job**: the GitHub release (and the Composer package) exists. Use "Re-run
-  failed jobs". If some npm packages were already published, publish the remaining ones
-  from a local `make release npm VERSION=1.2.3` build with `npm publish dist/npm/<package> --access public`.
+  failed jobs". If some npm packages were already published, the re-run fails on them:
+  publish the remaining ones by hand from the release archives, as in
+  [step 5.2 of the first release](#5-first-release-and-npm-trusted-publishing)
+  (`--tag next` only for pre-releases).
 - **A bad release**: release a fixed version. Don't delete tags or GitHub releases:
   Composer installs of that version would break. On npm, prefer `npm deprecate` over
   unpublishing.
