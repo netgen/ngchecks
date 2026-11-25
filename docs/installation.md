@@ -25,55 +25,37 @@ The Composer package `netgen/ngcheck` is a Composer plugin: after `composer inst
 and `composer update` it downloads the ngcheck binaries of its version for the current
 platform (verified against the release checksums) and exposes them as `vendor/bin/ngcheck`.
 
-### With netgen/git-hooks (recommended)
-
-`netgen/git-hooks` 4.x requires `netgen/ngcheck` and provides the CaptainHook action.
-
 1. Allow the plugin, otherwise Composer refuses to run it (non-interactive) or asks:
 
    ```sh
    composer config allow-plugins.netgen/ngcheck true
    ```
 
-2. Require (or update to) git-hooks 4:
+2. Require the package:
 
    ```sh
-   composer require --dev netgen/git-hooks:^4.0
+   composer require --dev netgen/ngcheck
    ```
 
 3. Add the action to the `pre-commit` hook in `captainhook.json` (and in
-   `captainhook.template.json` if the project has one):
+   `captainhook.template.json` if the project has one), before slower actions such as
+   PHPStan:
 
    ```json
    "pre-commit": {
        "enabled": true,
        "actions": [
            {
-               "action": "\\Netgen\\GitHooks\\Action\\CheckForSecrets"
+               "action": "vendor/bin/ngcheck secrets --staged"
            }
        ]
    }
    ```
 
-   Options (all optional): `"enabled": false` turns it off, `"ngcheck_path"` overrides
-   `vendor/bin/ngcheck`, `"error"` overrides the error message.
-
 4. Commit `composer.json`, `composer.lock` and `captainhook.json`.
 
-### Without netgen/git-hooks
-
-```sh
-composer config allow-plugins.netgen/ngcheck true
-composer require --dev netgen/ngcheck
-```
-
-Add a CaptainHook CLI action to the `pre-commit` hook:
-
-```json
-{
-    "action": "vendor/bin/ngcheck secrets --staged"
-}
-```
+New projects created from `netgen/media-site` get both the plugin permission and the
+action from its `composer.json` and `captainhook.template.json`.
 
 ### Development containers
 

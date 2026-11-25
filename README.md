@@ -26,7 +26,7 @@ to maintain.
 
 | Used by | Package | Install |
 |---|---|---|
-| Symfony / PHP projects, CaptainHook | [`netgen/ngcheck`](https://packagist.org/packages/netgen/ngcheck) on Packagist | `composer require --dev netgen/ngcheck` (or `netgen/git-hooks` 4+) |
+| Symfony / PHP projects, CaptainHook | [`netgen/ngcheck`](https://packagist.org/packages/netgen/ngcheck) on Packagist | `composer require --dev netgen/ngcheck` |
 | Node projects, Husky | [`@netgen/ngcheck`](https://www.npmjs.com/package/@netgen/ngcheck) on npm | `npm install --save-dev @netgen/ngcheck` |
 | CI pipelines (GitHub, Bitbucket, GitLab) | `ghcr.io/netgen/ngcheck` Docker image | `image: ghcr.io/netgen/ngcheck:1` |
 

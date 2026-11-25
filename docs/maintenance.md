@@ -17,7 +17,7 @@ This repository is the only source. A release publishes, from one version number
 | Artifact | Where | Built from | Consumed by |
 |---|---|---|---|
 | `ngcheck_<version>_<os>_<arch>.tar.gz` + `checksums.txt` | GitHub release `v<version>` | `scripts/build-release.sh` | the Composer plugin |
-| `netgen/ngcheck` | Packagist (reads the `v<version>` tag of this repository) | `composer.json`, `composer/` | Symfony / PHP projects, `netgen/git-hooks` |
+| `netgen/ngcheck` | Packagist (reads the `v<version>` tag of this repository) | `composer.json`, `composer/` | Symfony / PHP projects |
 | `@netgen/ngcheck` + `@netgen/ngcheck-<os>-<arch>` | npm | `npm/`, `scripts/build-npm.sh` | Node projects |
 | `ghcr.io/netgen/ngcheck:<version>`, `:<major>.<minor>`, `:<major>` | GitHub Container Registry | `Dockerfile` | CI pipelines |
 
@@ -42,8 +42,8 @@ How each package gets the binaries:
 - **Docker**: the image compiles ngcheck from source and downloads Betterleaks, both
   for the target architecture.
 
-`netgen/git-hooks` (4.x) requires `netgen/ngcheck` and provides the CaptainHook
-action `CheckForSecrets`, which runs `vendor/bin/ngcheck secrets --staged`.
+Projects run it from their hook managers with the same command: a CaptainHook action
+`vendor/bin/ngcheck secrets --staged`, or `ngcheck secrets --staged` in `.husky/pre-commit`.
 
 ## One-time setup
 
@@ -99,10 +99,9 @@ Change visibility → Public. Pipelines on Bitbucket and GitLab pull it without 
    following [installation.md](installation.md). Composer installs pre-releases with
    `composer require --dev netgen/ngcheck:^1.0@rc`, npm with `@netgen/ngcheck@next`.
 2. Release `1.0.0`.
-3. Merge and release `netgen/git-hooks` 4.0.0 (branch `NGSTACK-1071-check-for-secrets`),
-   which requires `netgen/ngcheck ^1.0`.
-4. Add the `CheckForSecrets` action to `captainhook.template.json` in `netgen/media-site`
-   and the plugin to its `config.allow-plugins`.
+3. Add `netgen/ngcheck` (`require-dev`) and `"netgen/ngcheck": true` (`config.allow-plugins`)
+   to `composer.json` in `netgen/media-site`, and the `vendor/bin/ngcheck secrets --staged`
+   action to the `pre-commit` hook in its `captainhook.template.json`, so new projects get it.
 
 ## Releasing
 
