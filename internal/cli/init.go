@@ -7,14 +7,14 @@ import (
 	"io"
 	"strings"
 
-	"github.com/netgen/ngcheck/internal/git"
-	"github.com/netgen/ngcheck/internal/setup"
+	"github.com/netgen/ngchecks/internal/git"
+	"github.com/netgen/ngchecks/internal/setup"
 )
 
-const initUsage = `Usage: ngcheck init [path]
+const initUsage = `Usage: ngchecks init [path]
 
 Sets up the project containing path (default: current directory):
-  - adds "ngcheck secrets --staged" to the pre-commit hook of CaptainHook
+  - adds "ngchecks secrets --staged" to the pre-commit hook of CaptainHook
     (captainhook.json, captainhook.template.json) or Husky (.husky/pre-commit),
   - creates the GitHub Actions pull request check, or prints the Bitbucket
     Pipelines / GitLab CI step to add.
@@ -53,7 +53,7 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 		return fail(stderr, err)
 	}
 
-	fmt.Fprintf(stdout, "Setting up ngcheck in %s\n\n", repository.Root)
+	fmt.Fprintf(stdout, "Setting up ngchecks in %s\n\n", repository.Root)
 
 	var changed []string
 
@@ -78,7 +78,7 @@ func runInit(args []string, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stdout, "\nReview and commit the changes:\n\n    git add %s\n", strings.Join(changed, " "))
 	}
 
-	fmt.Fprintln(stdout, "\nTo find secrets committed before, run: ngcheck secrets --history")
+	fmt.Fprintln(stdout, "\nTo find secrets committed before, run: ngchecks secrets --history")
 
 	return ExitOK
 }

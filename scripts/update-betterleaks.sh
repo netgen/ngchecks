@@ -16,7 +16,7 @@ trap 'rm -rf "$work"' EXIT
 download "https://github.com/betterleaks/betterleaks/releases/download/v${version}/checksums.txt" "$work/checksums.txt"
 
 {
-    echo "# Betterleaks release bundled with ngcheck. Update with scripts/update-betterleaks.sh,"
+    echo "# Betterleaks release bundled with ngchecks. Update with scripts/update-betterleaks.sh,"
     echo "# see docs/maintenance.md. Checksums come from the release's checksums.txt."
     echo "BETTERLEAKS_VERSION=$version"
 

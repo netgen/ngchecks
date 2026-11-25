@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/secrets"
-	"github.com/netgen/ngcheck/internal/testutil"
-	"github.com/netgen/ngcheck/ruleset"
+	"github.com/netgen/ngchecks/internal/secrets"
+	"github.com/netgen/ngchecks/internal/testutil"
+	"github.com/netgen/ngchecks/ruleset"
 )
 
 func TestRulesetIsValid(t *testing.T) {
@@ -57,7 +57,7 @@ func TestRulesetDetectsLeaks(t *testing.T) {
 		{"Redis DSN with password only", "dsn-credentials", "config/packages/cache.yaml", "framework:\n  cache:\n    default_redis_provider: 'redis://:Zr8Tq2Lm5Wx9@redis:6379'\n"},
 		{"repository URL with credentials", "dsn-credentials", "composer.json", `{"repositories": [{"type": "composer", "url": "https://deploy:Qw8Er2Ty6Ui0@packages.example.com"}]}` + "\n"},
 		{"mailer DSN with API key", "symfony-mailer-dsn-api-key", ".env", "MAILER_DSN=sendgrid+api://SG.k2Jd9LmQp4Xz7RtV1bNc@default\n"},
-		{"Cloudinary URL", "cloudinary-url", ".env", "CLOUDINARY_URL=cloudinary://123456789012345:Ab3dEf6hIj9kLm2nOp5qRs8tUv@netgen\n"},
+		{"Cloudinary URL", "cloudinary-url", ".env", "CLOUDINARY_URL=cloudinary://123456789012345:Ab3dEf6hIj9kLm2nOp5qRs8tUv@example\n"},
 		{"Composer auth.json", "composer-auth-credentials", "auth.json", `{"http-basic": {"updates.ibexa.co": {"username": "0123456789", "password": "9a8b7c6d5e4f3a2b1c0d"}}}` + "\n"},
 		{"COMPOSER_AUTH in CI config", "composer-auth-env-credentials", ".github/workflows/ci.yml", "env:\n  COMPOSER_AUTH: '{\"http-basic\":{\"repo.example.com\":{\"username\":\"u\",\"password\":\"Tz8Kq3Vm6Np1\"}}}'\n"},
 		{"Deployer password", "deployer-secret", "deploy/hosts.php", "<?php\nhost('prod')->set('become_password', 'Kx9mQ2vL7pRz');\n"},

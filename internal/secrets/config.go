@@ -12,7 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 )
 
-// ProjectConfigFile is the repository's own Betterleaks config. It extends the Netgen ruleset.
+// ProjectConfigFile is the repository's own Betterleaks config. It extends the built-in ruleset.
 const ProjectConfigFile = ".betterleaks.toml"
 
 // Global expressions that Betterleaks replaces instead of merging when extending a config.
@@ -20,7 +20,7 @@ var combinedKeys = []string{"prefilter", "filter"}
 
 // composeConfig writes the Betterleaks config for a repository into dir and returns its path.
 //
-// Without a project config, that is the Netgen ruleset. With one, a config is generated that
+// Without a project config, that is the built-in ruleset. With one, a config is generated that
 // extends the ruleset (which extends the Betterleaks defaults) and combines the project's global
 // prefilter and filter with the ruleset's ones: Betterleaks itself would replace them, silently
 // dropping all built-in exclusions such as node_modules/.
@@ -72,7 +72,7 @@ func composeConfig(repositoryRoot string, ruleset []byte, dir string) (string, e
 
 		for _, key := range []string{"path", "useDefault"} {
 			if _, ok := extend[key]; ok {
-				return "", fmt.Errorf("%s: [extend] must not set %q, the Netgen ruleset is extended automatically", ProjectConfigFile, key)
+				return "", fmt.Errorf("%s: [extend] must not set %q, the built-in ruleset is extended automatically", ProjectConfigFile, key)
 			}
 		}
 	}

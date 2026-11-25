@@ -10,7 +10,7 @@ const (
 	GitLab    Platform = "GitLab CI"
 )
 
-// Context describes the CI job ngcheck runs in. The zero value means "not in CI".
+// Context describes the CI job ngchecks runs in. The zero value means "not in CI".
 type Context struct {
 	Platform Platform
 	// BaseRef is the ref or commit the pull request is compared against.

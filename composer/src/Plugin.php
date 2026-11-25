@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Netgen\Ngcheck\Composer;
+namespace Netgen\Ngchecks\Composer;
 
 use Composer\Composer;
 use Composer\EventDispatcher\EventSubscriberInterface;
@@ -22,13 +22,13 @@ use function realpath;
 use function rtrim;
 
 /**
- * After "composer install" and "composer update", downloads the ngcheck release matching the
- * installed package version (vendor/bin/ngcheck runs it). When the package is added to a
- * project, also sets the project up with "ngcheck init".
+ * After "composer install" and "composer update", downloads the ngchecks release matching the
+ * installed package version (vendor/bin/ngchecks runs it). When the package is added to a
+ * project, also sets the project up with "ngchecks init".
  */
 final class Plugin implements PluginInterface, EventSubscriberInterface
 {
-    private const PACKAGE_NAME = 'netgen/ngcheck';
+    private const PACKAGE_NAME = 'netgen/ngchecks';
 
     private Composer $composer;
 
@@ -67,7 +67,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
     }
 
     /**
-     * "composer require" (and "composer update"): when this adds ngcheck to the project, set it up.
+     * "composer require" (and "composer update"): when this adds ngchecks to the project, set it up.
      */
     public function onUpdate(): void
     {
@@ -80,7 +80,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
         $this->firstInstall = false;
 
         if (!$this->io->isInteractive()) {
-            $this->io->write('<info>netgen/ngcheck: run "vendor/bin/ngcheck init" to set up the git hook and the pull request check.</info>');
+            $this->io->write('<info>netgen/ngchecks: run "vendor/bin/ngchecks init" to set up the git hook and the pull request check.</info>');
 
             return;
         }
@@ -120,7 +120,7 @@ final class Plugin implements PluginInterface, EventSubscriberInterface
 
         if ($exitCode !== 0) {
             $this->io->writeError(rtrim($executor->getErrorOutput()));
-            $this->io->writeError('<warning>netgen/ngcheck: setting up the project failed, fix the problem and run "vendor/bin/ngcheck init".</warning>');
+            $this->io->writeError('<warning>netgen/ngchecks: setting up the project failed, fix the problem and run "vendor/bin/ngchecks init".</warning>');
         }
     }
 

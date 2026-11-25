@@ -10,7 +10,7 @@ import (
 )
 
 // The JSON types below keep the key order and the one-line formatting of the decoded
-// document, so config files edited by ngcheck init only change where something was added.
+// document, so config files edited by ngchecks init only change where something was added.
 
 type jsonObject struct {
 	keys   []string

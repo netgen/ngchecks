@@ -1,4 +1,4 @@
-// Package ruleset embeds the Netgen Betterleaks ruleset into the ngcheck binary.
+// Package ruleset embeds the built-in Betterleaks ruleset into the ngchecks binary.
 package ruleset
 
 import _ "embed"

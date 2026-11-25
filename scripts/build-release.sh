@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds the release archives for every platform into dist/:
-#   dist/ngcheck_<version>_<platform>.tar.gz   ngcheck + Betterleaks + licenses
+#   dist/ngchecks_<version>_<platform>.tar.gz   ngchecks + Betterleaks + licenses
 #   dist/checksums.txt                         SHA-256 of every archive
 #
 # Usage: scripts/build-release.sh <version>    e.g. 1.2.3
@@ -19,26 +19,26 @@ for platform in $PLATFORMS; do
     staging="$dist/staging/$platform"
     mkdir -p "$staging"
 
-    echo "Building ngcheck $version for $platform"
+    echo "Building ngchecks $version for $platform"
     (
         cd "$ROOT_DIR"
         CGO_ENABLED=0 GOOS=$(go_os "$platform") GOARCH=$(go_arch "$platform") \
-            go build -trimpath -ldflags "-s -w -X main.version=$version" -o "$staging/ngcheck" ./cmd/ngcheck
+            go build -trimpath -ldflags "-s -w -X main.version=$version" -o "$staging/ngchecks" ./cmd/ngchecks
     )
 
     "$ROOT_DIR/scripts/fetch-betterleaks.sh" "$platform" "$staging"
     cp "$ROOT_DIR/LICENSE" "$staging/LICENSE"
-    chmod 0755 "$staging/ngcheck" "$staging/betterleaks"
+    chmod 0755 "$staging/ngchecks" "$staging/betterleaks"
     chmod 0644 "$staging/LICENSE" "$staging/LICENSE.betterleaks"
 
-    tar -czf "$dist/ngcheck_${version}_${platform}.tar.gz" -C "$staging" ngcheck betterleaks LICENSE LICENSE.betterleaks
+    tar -czf "$dist/ngchecks_${version}_${platform}.tar.gz" -C "$staging" ngchecks betterleaks LICENSE LICENSE.betterleaks
 done
 
 rm -rf "$dist/staging"
 
 (
     cd "$dist"
-    for archive in ngcheck_*.tar.gz; do
+    for archive in ngchecks_*.tar.gz; do
         echo "$(sha256 "$archive")  $archive"
     done > checksums.txt
 )

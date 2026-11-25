@@ -6,9 +6,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/git"
-	"github.com/netgen/ngcheck/internal/setup"
-	"github.com/netgen/ngcheck/internal/testutil"
+	"github.com/netgen/ngchecks/internal/git"
+	"github.com/netgen/ngchecks/internal/setup"
+	"github.com/netgen/ngchecks/internal/testutil"
 )
 
 func run(t *testing.T, repo *testutil.Repo) []setup.Step {
@@ -67,7 +67,7 @@ const captainHookConfig = `{
         "enabled": true,
         "actions": [
             {
-                "action": "\\Netgen\\GitHooks\\Action\\Regex",
+                "action": "\\CaptainHook\\App\\Hook\\Message\\Action\\Regex",
                 "options": {
                     "regex": "/^[A-Z0-9]+-\\d+:?\\s/",
                     "error": "Your commit message MUST start with a ticket ID"
@@ -79,7 +79,7 @@ const captainHookConfig = `{
         "enabled": true,
         "actions": [
             {
-                "action": "\\Netgen\\GitHooks\\Action\\PHPStan",
+                "action": "\\CaptainHook\\App\\Hook\\PHP\\Action\\Linting",
                 "options": {
                     "excluded_files": ["/^deploy.*/"],
                     "level": 8
@@ -112,7 +112,7 @@ func TestAddsActionToCaptainHookConfigsKeepingTheirContent(t *testing.T) {
         "enabled": true,
         "actions": [
             {
-                "action": "vendor/bin/ngcheck secrets --staged"
+                "action": "vendor/bin/ngchecks secrets --staged"
             },
 `, 1)
 	if got := read(t, repo, "captainhook.json"); got != expected {
@@ -124,7 +124,7 @@ func TestAddsActionToCaptainHookConfigsKeepingTheirContent(t *testing.T) {
         "enabled": true,
         "actions": [
             {
-                "action": "vendor/bin/ngcheck secrets --staged"
+                "action": "vendor/bin/ngchecks secrets --staged"
             }
         ]
     }
@@ -147,7 +147,7 @@ func TestCreatesCaptainHookConfigWhenCaptainHookIsInstalled(t *testing.T) {
 	steps := run(t, repo)
 
 	assertStatus(t, steps, "captainhook.json", setup.Changed)
-	if !strings.Contains(read(t, repo, "captainhook.json"), `"action": "vendor/bin/ngcheck secrets --staged"`) {
+	if !strings.Contains(read(t, repo, "captainhook.json"), `"action": "vendor/bin/ngchecks secrets --staged"`) {
 		t.Errorf("action not added:\n%s", read(t, repo, "captainhook.json"))
 	}
 	if !hasTodo(steps, "vendor/bin/captainhook install") {
@@ -172,19 +172,19 @@ func TestAddsCommandToHuskyHook(t *testing.T) {
 	}{
 		"before existing commands": {
 			map[string]string{".husky/pre-commit": "npx lint-staged\n"},
-			"ngcheck secrets --staged\nnpx lint-staged\n",
+			"ngchecks secrets --staged\nnpx lint-staged\n",
 		},
 		"after the shebang": {
 			map[string]string{".husky/pre-commit": "#!/usr/bin/env sh\n. \"$(dirname -- \"$0\")/_/husky.sh\"\n\nnpm test\n"},
-			"#!/usr/bin/env sh\nngcheck secrets --staged\n. \"$(dirname -- \"$0\")/_/husky.sh\"\n\nnpm test\n",
+			"#!/usr/bin/env sh\nngchecks secrets --staged\n. \"$(dirname -- \"$0\")/_/husky.sh\"\n\nnpm test\n",
 		},
 		"new hook file": {
 			map[string]string{".husky/commit-msg": "npx commitlint --edit $1\n"},
-			"ngcheck secrets --staged\n",
+			"ngchecks secrets --staged\n",
 		},
 		"Yarn Plug'n'Play": {
 			map[string]string{".husky/pre-commit": "yarn lint-staged\n", ".pnp.cjs": ""},
-			"yarn ngcheck secrets --staged\nyarn lint-staged\n",
+			"yarn ngchecks secrets --staged\nyarn lint-staged\n",
 		},
 	}
 
@@ -247,7 +247,7 @@ func TestCreatesGitHubWorkflow(t *testing.T) {
 	assertStatus(t, run(t, repo), ".github/workflows/secrets.yml", setup.Changed)
 
 	workflow := read(t, repo, ".github/workflows/secrets.yml")
-	for _, expected := range []string{"pull_request", "container: ghcr.io/netgen/ngcheck:1", "fetch-depth: 0", "run: ngcheck secrets"} {
+	for _, expected := range []string{"pull_request", "container: ghcr.io/netgen/ngchecks:1", "fetch-depth: 0", "run: ngchecks secrets"} {
 		if !strings.Contains(workflow, expected) {
 			t.Errorf("workflow does not contain %q:\n%s", expected, workflow)
 		}
@@ -258,7 +258,7 @@ func TestCreatesGitHubWorkflow(t *testing.T) {
 
 func TestDetectsGitHubFromRemote(t *testing.T) {
 	repo := testutil.NewRepo(t)
-	repo.Git("remote", "add", "origin", "git@github.com:netgen/project.git")
+	repo.Git("remote", "add", "origin", "git@github.com:example/project.git")
 
 	assertStatus(t, run(t, repo), ".github/workflows/secrets.yml", setup.Changed)
 }
@@ -271,7 +271,7 @@ func TestPrintsPipelineSteps(t *testing.T) {
 		steps := run(t, repo)
 
 		assertStatus(t, steps, "bitbucket-pipelines.yml", setup.Todo)
-		if step, _ := find(steps, "bitbucket-pipelines.yml"); !strings.Contains(step.Snippet, "ngcheck secrets --junit test-reports/secrets.xml") {
+		if step, _ := find(steps, "bitbucket-pipelines.yml"); !strings.Contains(step.Snippet, "ngchecks secrets --junit test-reports/secrets.xml") {
 			t.Errorf("unexpected snippet %q", step.Snippet)
 		}
 		if read(t, repo, "bitbucket-pipelines.yml") != "pipelines:\n  default: []\n" {
@@ -281,16 +281,16 @@ func TestPrintsPipelineSteps(t *testing.T) {
 
 	t.Run("Bitbucket remote without pipeline", func(t *testing.T) {
 		repo := testutil.NewRepo(t)
-		repo.Git("remote", "add", "origin", "git@bitbucket.org:netgen/project.git")
+		repo.Git("remote", "add", "origin", "git@bitbucket.org:example/project.git")
 
 		if step, _ := find(run(t, repo), "bitbucket-pipelines.yml"); step.Status != setup.Todo || !strings.HasPrefix(step.Message, "create it") {
 			t.Errorf("unexpected step %+v", step)
 		}
 	})
 
-	t.Run("GitLab pipeline already running ngcheck", func(t *testing.T) {
+	t.Run("GitLab pipeline already running ngchecks", func(t *testing.T) {
 		repo := testutil.NewRepo(t)
-		repo.Write(".gitlab-ci.yml", "secrets:\n  script:\n    - ngcheck secrets\n")
+		repo.Write(".gitlab-ci.yml", "secrets:\n  script:\n    - ngchecks secrets\n")
 
 		assertStatus(t, run(t, repo), ".gitlab-ci.yml", setup.Unchanged)
 	})
@@ -325,7 +325,7 @@ func TestRejectsInvalidCaptainHookConfig(t *testing.T) {
 	}
 }
 
-// netgen/media-site projects commit captainhook.template.json and symlink captainhook.json to it.
+// Projects can commit captainhook.template.json and symlink captainhook.json to it.
 func TestEditsTheTemplateCaptainHookConfigIsLinkedTo(t *testing.T) {
 	repo := testutil.NewRepo(t)
 	repo.Write("captainhook.template.json", `{"pre-commit": {"enabled": true, "actions": []}}`)
@@ -343,7 +343,7 @@ func TestEditsTheTemplateCaptainHookConfigIsLinkedTo(t *testing.T) {
 	if info, err := os.Lstat(filepath.Join(repo.Root, "captainhook.json")); err != nil || info.Mode()&os.ModeSymlink == 0 {
 		t.Error("captainhook.json must stay a symlink")
 	}
-	if !strings.Contains(read(t, repo, "captainhook.template.json"), "vendor/bin/ngcheck secrets --staged") {
+	if !strings.Contains(read(t, repo, "captainhook.template.json"), "vendor/bin/ngchecks secrets --staged") {
 		t.Error("the template was not changed")
 	}
 }

@@ -3,7 +3,7 @@ package ci_test
 import (
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/ci"
+	"github.com/netgen/ngchecks/internal/ci"
 )
 
 func TestDetect(t *testing.T) {

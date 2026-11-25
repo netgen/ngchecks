@@ -1,11 +1,11 @@
-// Package cli implements the ngcheck command line interface.
+// Package cli implements the ngchecks command line interface.
 package cli
 
 import (
 	"fmt"
 	"io"
 
-	"github.com/netgen/ngcheck/internal/betterleaks"
+	"github.com/netgen/ngchecks/internal/betterleaks"
 )
 
 // Exit codes shared by all checks.
@@ -15,19 +15,19 @@ const (
 	ExitError    = 2
 )
 
-const usage = `ngcheck - Netgen project checks
+const usage = `ngchecks - project checks for git hooks and CI
 
 Usage:
-  ngcheck init [path]                Set up the git hook and CI check of a project
-  ngcheck secrets [options] [path]   Scan a git repository for leaked secrets
-  ngcheck version                    Show the ngcheck and Betterleaks versions
-  ngcheck help                       Show this help
+  ngchecks init [path]                Set up the git hook and CI check of a project
+  ngchecks secrets [options] [path]   Scan a git repository for leaked secrets
+  ngchecks version                    Show the ngchecks and Betterleaks versions
+  ngchecks help                       Show this help
 
-Run "ngcheck <command> --help" for the options of a command.
+Run "ngchecks <command> --help" for the options of a command.
 Exit codes: 0 passed, 1 problems found, 2 error.
 `
 
-// Run executes ngcheck with the given arguments (without the program name).
+// Run executes ngchecks with the given arguments (without the program name).
 func Run(args []string, stdout, stderr io.Writer, getenv func(string) string, version string) int {
 	if len(args) == 0 {
 		fmt.Fprint(stderr, usage)
@@ -45,13 +45,13 @@ func Run(args []string, stdout, stderr io.Writer, getenv func(string) string, ve
 		fmt.Fprint(stdout, usage)
 		return ExitOK
 	default:
-		fmt.Fprintf(stderr, "ngcheck: unknown command %q\n\n%s", args[0], usage)
+		fmt.Fprintf(stderr, "ngchecks: unknown command %q\n\n%s", args[0], usage)
 		return ExitError
 	}
 }
 
 func runVersion(stdout, stderr io.Writer, getenv func(string) string, version string) int {
-	fmt.Fprintf(stdout, "ngcheck %s\n", version)
+	fmt.Fprintf(stdout, "ngchecks %s\n", version)
 
 	binary, err := betterleaks.Locate(getenv)
 	if err == nil {
@@ -62,7 +62,7 @@ func runVersion(stdout, stderr io.Writer, getenv func(string) string, version st
 		}
 	}
 
-	fmt.Fprintf(stderr, "ngcheck: error: %v\n", err)
+	fmt.Fprintf(stderr, "ngchecks: error: %v\n", err)
 
 	return ExitError
 }

@@ -1,15 +1,15 @@
-# ngcheck
+# ngchecks
 
-Netgen project checks for git hooks and CI pipelines, usable in any stack (Symfony,
+Project checks for git hooks and CI pipelines, usable in any stack (Symfony,
 Node, anything with git).
 
-`ngcheck secrets` blocks leaked secrets (passwords, API keys, tokens, private keys,
+`ngchecks secrets` blocks leaked secrets (passwords, API keys, tokens, private keys,
 credentials in DSNs, committed `.env.local` files...) before they are committed and
 in pull requests. It runs [Betterleaks](https://github.com/betterleaks/betterleaks)
-with a ruleset for the stacks used at Netgen on top of the Betterleaks built-in rules.
+with its built-in rules plus a ruleset for Symfony / Ibexa and Node projects.
 
 ```console
-$ ngcheck secrets --staged
+$ ngchecks secrets --staged
 Scanning staged changes in /var/www/project
 
 RULE             LOCATION
@@ -26,19 +26,19 @@ to maintain.
 
 | Used by | Package | Install |
 |---|---|---|
-| Symfony / PHP projects, CaptainHook | [`netgen/ngcheck`](https://packagist.org/packages/netgen/ngcheck) on Packagist | `composer require --dev netgen/ngcheck` (sets the project up) |
-| Node projects, Husky | [`@netgen/ngcheck`](https://www.npmjs.com/package/@netgen/ngcheck) on npm | `npm install --save-dev @netgen/ngcheck && npm exec -- ngcheck init` |
-| CI pipelines (GitHub, Bitbucket, GitLab) | `ghcr.io/netgen/ngcheck` Docker image | `image: ghcr.io/netgen/ngcheck:1`, set up by `ngcheck init` |
+| PHP projects, CaptainHook | [`netgen/ngchecks`](https://packagist.org/packages/netgen/ngchecks) on Packagist | `composer require --dev netgen/ngchecks` (sets the project up) |
+| Node projects, Husky | [`@netgen/ngchecks`](https://www.npmjs.com/package/@netgen/ngchecks) on npm | `npm install --save-dev @netgen/ngchecks && npm exec -- ngchecks init` |
+| CI pipelines (GitHub, Bitbucket, GitLab) | `ghcr.io/netgen/ngchecks` Docker image | `image: ghcr.io/netgen/ngchecks:1`, set up by `ngchecks init` |
 
-Each distribution ships the same two binaries: `ngcheck` (Go, this repository) and
-the pinned Betterleaks release it runs. The ruleset is embedded in `ngcheck`.
+Each distribution ships the same two binaries: `ngchecks` (Go, this repository) and
+the pinned Betterleaks release it runs. The ruleset is embedded in `ngchecks`.
 
 ```mermaid
 flowchart LR
-    repo["netgen/ngcheck<br/>Go source, ruleset,<br/>pinned Betterleaks"] --> release["GitHub release<br/>ngcheck_VERSION_OS_ARCH.tar.gz"]
-    release --> composer["Packagist: netgen/ngcheck<br/>plugin downloads the archive"]
-    release --> npm["npm: @netgen/ngcheck<br/>+ one package per platform"]
-    repo --> docker["ghcr.io/netgen/ngcheck"]
+    repo["netgen/ngchecks<br/>Go source, ruleset,<br/>pinned Betterleaks"] --> release["GitHub release<br/>ngchecks_VERSION_OS_ARCH.tar.gz"]
+    release --> composer["Packagist: netgen/ngchecks<br/>plugin downloads the archive"]
+    release --> npm["npm: @netgen/ngchecks<br/>+ one package per platform"]
+    repo --> docker["ghcr.io/netgen/ngchecks"]
 ```
 
 ## Documentation
@@ -51,12 +51,12 @@ flowchart LR
 ## Usage
 
 ```
-ngcheck init [path]
+ngchecks init [path]
 
   adds the pre-commit hook (CaptainHook or Husky) and the pull request check
   (GitHub Actions; prints the Bitbucket Pipelines / GitLab CI step) to the project
 
-ngcheck secrets [options] [path]
+ngchecks secrets [options] [path]
 
   --staged        scan the changes staged for commit (pre-commit hook)
   --since REF     scan the commits added after REF (REF..HEAD)
@@ -78,8 +78,8 @@ Requires Go (see `go.mod`), git and a POSIX shell.
 ```sh
 make test     # downloads the pinned Betterleaks into .cache/ and runs all tests
 make lint
-make build    # bin/ngcheck and bin/betterleaks for this machine
-bin/ngcheck secrets --history
+make build    # bin/ngchecks and bin/betterleaks for this machine
+bin/ngchecks secrets --history
 ```
 
 See [docs/maintenance.md](docs/maintenance.md) for the repository layout and release process.

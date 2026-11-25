@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/betterleaks"
+	"github.com/netgen/ngchecks/internal/betterleaks"
 )
 
-// Betterleaks returns the Betterleaks binary for integration tests ($NGCHECK_BETTERLEAKS,
+// Betterleaks returns the Betterleaks binary for integration tests ($NGCHECKS_BETTERLEAKS,
 // set by "make test").
 func Betterleaks(t *testing.T) string {
 	t.Helper()

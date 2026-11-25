@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/netgen/ngcheck/internal/secrets"
+	"github.com/netgen/ngchecks/internal/secrets"
 )
 
 type jsonFinding struct {
@@ -69,7 +69,7 @@ func WriteJUnit(findings []secrets.Finding, path string) error {
 
 	if len(findings) == 0 {
 		suite.Tests = 1
-		suite.Cases = []junitCase{{ClassName: "ngcheck.secrets", Name: "No secrets found"}}
+		suite.Cases = []junitCase{{ClassName: "ngchecks.secrets", Name: "No secrets found"}}
 	}
 
 	for _, f := range findings {

@@ -1,4 +1,4 @@
-// Package setup configures a project to run ngcheck: the pre-commit hook of its
+// Package setup configures a project to run ngchecks: the pre-commit hook of its
 // hook manager (CaptainHook or Husky) and the pull request check of its CI.
 package setup
 
@@ -10,19 +10,19 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/netgen/ngcheck/internal/git"
+	"github.com/netgen/ngchecks/internal/git"
 )
 
 const (
-	// CaptainHookAction is the CaptainHook pre-commit action running ngcheck.
-	CaptainHookAction = "vendor/bin/ngcheck secrets --staged"
-	// HuskyCommand is the line running ngcheck in .husky/pre-commit.
-	HuskyCommand = "ngcheck secrets --staged"
+	// CaptainHookAction is the CaptainHook pre-commit action running ngchecks.
+	CaptainHookAction = "vendor/bin/ngchecks secrets --staged"
+	// HuskyCommand is the line running ngchecks in .husky/pre-commit.
+	HuskyCommand = "ngchecks secrets --staged"
 
-	// Any hook or pipeline containing this already runs ngcheck.
-	marker = "ngcheck secrets"
+	// Any hook or pipeline containing this already runs ngchecks.
+	marker = "ngchecks secrets"
 
-	docsURL = "https://github.com/netgen/ngcheck/blob/master/docs/installation.md"
+	docsURL = "https://github.com/netgen/ngchecks/blob/master/docs/installation.md"
 )
 
 // Status of a setup step.
@@ -76,7 +76,7 @@ func (s *setup) hooks() error {
 
 		captainHook = true
 
-		// netgen/media-site projects symlink captainhook.json to the committed template:
+		// Projects that commit captainhook.template.json often symlink captainhook.json to it:
 		// edit and report the file the link points to, once.
 		target := s.resolve(file)
 		if edited[target] {
@@ -119,11 +119,11 @@ func (s *setup) hooks() error {
 
 	switch {
 	case s.exists("composer.json"):
-		s.add(Todo, "", "No git hook manager found. Install CaptainHook, then run ngcheck init again:",
-			"composer require --dev captainhook/captainhook\nvendor/bin/ngcheck init")
+		s.add(Todo, "", "No git hook manager found. Install CaptainHook, then run ngchecks init again:",
+			"composer require --dev captainhook/captainhook\nvendor/bin/ngchecks init")
 	case s.exists("package.json"):
-		s.add(Todo, "", "No git hook manager found. Set up Husky, then run ngcheck init again:",
-			"npm install --save-dev husky\nnpx husky init\nnpm exec -- ngcheck init")
+		s.add(Todo, "", "No git hook manager found. Set up Husky, then run ngchecks init again:",
+			"npm install --save-dev husky\nnpx husky init\nnpm exec -- ngchecks init")
 	default:
 		s.add(Todo, "", "No git hook manager found. Run this command in the pre-commit git hook:", HuskyCommand)
 	}
@@ -179,7 +179,7 @@ func (s *setup) addCaptainHookAction(file string) error {
 	enabled := hook.values["enabled"] == true
 
 	if configured && enabled {
-		s.add(Unchanged, file, "the pre-commit hook already runs ngcheck", "")
+		s.add(Unchanged, file, "the pre-commit hook already runs ngchecks", "")
 		return nil
 	}
 
@@ -243,11 +243,11 @@ func (s *setup) addHuskyCommand() error {
 	}
 
 	if strings.Contains(string(content), marker) {
-		s.add(Unchanged, file, "already runs ngcheck", "")
+		s.add(Unchanged, file, "already runs ngchecks", "")
 		return nil
 	}
 
-	// Run ngcheck first, before slower commands such as lint-staged or tests.
+	// Run ngchecks first, before slower commands such as lint-staged or tests.
 	updated := command + "\n" + string(content)
 	if strings.HasPrefix(string(content), "#!") {
 		shebang, rest, _ := strings.Cut(string(content), "\n")
@@ -313,7 +313,7 @@ func (s *setup) addGitHubWorkflow() error {
 
 	file := ".github/workflows/secrets.yml"
 	if s.exists(file) {
-		file = ".github/workflows/ngcheck-secrets.yml"
+		file = ".github/workflows/ngchecks-secrets.yml"
 	}
 
 	if err := os.MkdirAll(s.path(".github/workflows"), 0o755); err != nil {
@@ -338,7 +338,7 @@ func (s *setup) checkPipeline(file, snippet string) {
 	case strings.Contains(string(content), marker):
 		s.add(Unchanged, file, "already runs the pull request check", "")
 	default:
-		s.add(Todo, file, "add the pull request check to it (ngcheck init does not edit existing pipelines):", snippet)
+		s.add(Todo, file, "add the pull request check to it (ngchecks init does not edit existing pipelines):", snippet)
 	}
 }
 
@@ -391,23 +391,23 @@ jobs:
     secrets:
         name: Secret scan
         runs-on: ubuntu-latest
-        container: ghcr.io/netgen/ngcheck:1
+        container: ghcr.io/netgen/ngchecks:1
         steps:
             - uses: actions/checkout@v7
               with:
                   fetch-depth: 0
-            - run: ngcheck secrets
+            - run: ngchecks secrets
 `
 
 const bitbucketPipeline = `definitions:
     steps:
         - step: &secrets
               name: Secret leak protection
-              image: ghcr.io/netgen/ngcheck:1
+              image: ghcr.io/netgen/ngchecks:1
               clone:
                   depth: full
               script:
-                  - ngcheck secrets --junit test-reports/secrets.xml
+                  - ngchecks secrets --junit test-reports/secrets.xml
 
 pipelines:
     pull-requests:
@@ -416,13 +416,13 @@ pipelines:
 `
 
 const gitlabPipeline = `secrets:
-    image: ghcr.io/netgen/ngcheck:1
+    image: ghcr.io/netgen/ngchecks:1
     variables:
         GIT_DEPTH: 0
     rules:
         - if: $CI_PIPELINE_SOURCE == "merge_request_event"
     script:
-        - ngcheck secrets --junit secrets.xml
+        - ngchecks secrets --junit secrets.xml
     artifacts:
         when: always
         reports:

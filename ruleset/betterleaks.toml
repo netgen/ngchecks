@@ -1,7 +1,7 @@
-# Netgen secret leak protection ruleset, embedded into the ngcheck binary.
+# Built-in ngchecks ruleset, embedded into the ngchecks binary.
 #
 # Extends the Betterleaks built-in rules (pinned together with the binary, see
-# betterleaks.env) with rules for the stacks used at Netgen: Symfony / Ibexa
+# betterleaks.env) with rules for Symfony / Ibexa
 # and Node.
 #
 # A global `prefilter` or `filter` replaces the one of the config it extends,
@@ -11,7 +11,7 @@
 # Projects add their own rules and exclusions in `.betterleaks.toml` in the
 # repository root, see docs/installation.md.
 
-title = 'Netgen secret leak protection'
+title = 'ngchecks built-in ruleset'
 minVersion = 'v8.25.0'
 betterleaksMinVersion = 'v1.10.0'
 

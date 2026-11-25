@@ -1,4 +1,4 @@
-# Secret scanning config for this repository, extends the Netgen ruleset.
+# Secret scanning config for this repository, extends the built-in ruleset.
 # Tests and the ruleset contain fake credentials to exercise the rules.
 
 prefilter = '''

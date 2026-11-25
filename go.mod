@@ -1,4 +1,4 @@
-module github.com/netgen/ngcheck
+module github.com/netgen/ngchecks
 
 go 1.26
 

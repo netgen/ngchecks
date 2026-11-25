@@ -4,9 +4,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/secrets"
-	"github.com/netgen/ngcheck/internal/testutil"
-	"github.com/netgen/ngcheck/ruleset"
+	"github.com/netgen/ngchecks/internal/secrets"
+	"github.com/netgen/ngchecks/internal/testutil"
+	"github.com/netgen/ngchecks/ruleset"
 )
 
 func scan(t *testing.T, repo *testutil.Repo, target secrets.Target) []secrets.Finding {
@@ -110,7 +110,7 @@ func TestIgnoreFileAndInlineAllowCommentSuppressFindings(t *testing.T) {
 	}
 }
 
-func TestProjectConfigExtendsNetgenRuleset(t *testing.T) {
+func TestProjectConfigExtendsBuiltInRuleset(t *testing.T) {
 	repo := newRepo(t)
 	fakeToken := token()
 	repo.Write(secrets.ProjectConfigFile, `

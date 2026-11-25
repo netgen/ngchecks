@@ -1,7 +1,7 @@
 #!/bin/sh
 # Builds the npm packages from the release archives in dist/ into dist/npm/:
-#   dist/npm/ngcheck                @netgen/ngcheck: launcher, depends on all platform packages
-#   dist/npm/ngcheck-<os>-<arch>    @netgen/ngcheck-<os>-<arch>: ngcheck and Betterleaks binaries
+#   dist/npm/ngchecks               @netgen/ngchecks: launcher, depends on all platform packages
+#   dist/npm/ngchecks-<os>-<arch>   @netgen/ngchecks-<os>-<arch>: ngchecks and Betterleaks binaries
 #
 # Usage: scripts/build-npm.sh <version>    run scripts/build-release.sh <version> first
 set -eu
@@ -17,46 +17,46 @@ rm -rf "$out"
 mkdir -p "$out"
 
 for platform in $PLATFORMS; do
-    archive="$dist/ngcheck_${version}_${platform}.tar.gz"
+    archive="$dist/ngchecks_${version}_${platform}.tar.gz"
     [ -f "$archive" ] || fail "missing $archive, run scripts/build-release.sh $version first"
 
     os=${platform%_*}
     arch=${platform#*_}
-    package="$out/ngcheck-$os-$arch"
+    package="$out/ngchecks-$os-$arch"
     mkdir -p "$package/bin"
 
-    tar -xzf "$archive" -C "$package/bin" ngcheck betterleaks
+    tar -xzf "$archive" -C "$package/bin" ngchecks betterleaks
     tar -xzf "$archive" -C "$package" LICENSE LICENSE.betterleaks
 
     cat > "$package/package.json" << EOF
 {
-    "name": "@netgen/ngcheck-$os-$arch",
+    "name": "@netgen/ngchecks-$os-$arch",
     "version": "$version",
-    "description": "ngcheck and Betterleaks binaries for $os $arch, installed by @netgen/ngcheck",
-    "homepage": "https://github.com/netgen/ngcheck",
+    "description": "ngchecks and Betterleaks binaries for $os $arch, installed by @netgen/ngchecks",
+    "homepage": "https://github.com/netgen/ngchecks",
     "repository": {
         "type": "git",
-        "url": "git+https://github.com/netgen/ngcheck.git"
+        "url": "git+https://github.com/netgen/ngchecks.git"
     },
     "license": "MIT",
     "author": "Netgen (https://netgen.io)",
     "os": ["$os"],
     "cpu": ["$arch"],
     "preferUnplugged": true,
-    "files": ["bin/ngcheck", "bin/betterleaks", "LICENSE.betterleaks"]
+    "files": ["bin/ngchecks", "bin/betterleaks", "LICENSE.betterleaks"]
 }
 EOF
 
     cat > "$package/README.md" << EOF
-# @netgen/ngcheck-$os-$arch
+# @netgen/ngchecks-$os-$arch
 
-The ngcheck and Betterleaks binaries for $os $arch. Do not install this package
-directly, install [@netgen/ngcheck](https://www.npmjs.com/package/@netgen/ngcheck).
+The ngchecks and Betterleaks binaries for $os $arch. Do not install this package
+directly, install [@netgen/ngchecks](https://www.npmjs.com/package/@netgen/ngchecks).
 EOF
 done
 
-cp -R "$ROOT_DIR/npm" "$out/ngcheck"
-cp "$ROOT_DIR/LICENSE" "$out/ngcheck/LICENSE"
+cp -R "$ROOT_DIR/npm" "$out/ngchecks"
+cp "$ROOT_DIR/LICENSE" "$out/ngchecks/LICENSE"
 
 node -e '
 const fs = require("node:fs");
@@ -67,7 +67,7 @@ for (const name of Object.keys(manifest.optionalDependencies)) {
     manifest.optionalDependencies[name] = version;
 }
 fs.writeFileSync(file, JSON.stringify(manifest, null, 4) + "\n");
-' "$out/ngcheck/package.json" "$version"
+' "$out/ngchecks/package.json" "$version"
 
 echo "npm packages in $out:"
 ls "$out"

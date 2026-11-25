@@ -1,7 +1,7 @@
 # shellcheck shell=sh
 # Shared helpers for the build scripts. Source it, do not run it.
 
-# Platforms ngcheck is released for, in Betterleaks / Node.js naming: <os>_<arch>.
+# Platforms ngchecks is released for, in Betterleaks / Node.js naming: <os>_<arch>.
 # shellcheck disable=SC2034 # used by the scripts sourcing this file
 PLATFORMS="darwin_arm64 darwin_x64 linux_arm64 linux_x64"
 

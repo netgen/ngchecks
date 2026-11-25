@@ -1,8 +1,8 @@
 # Publishes a release, see docs/maintenance.md:
 #   - GitHub release v<version> with the binaries (the tag is created with it, so
 #     Packagist only sees the new version once the Composer plugin can download them)
-#   - Docker image ghcr.io/netgen/ngcheck:<version>, :<major>.<minor>, :<major>
-#   - npm packages @netgen/ngcheck and @netgen/ngcheck-<os>-<arch>
+#   - Docker image ghcr.io/netgen/ngchecks:<version>, :<major>.<minor>, :<major>
+#   - npm packages @netgen/ngchecks and @netgen/ngchecks-<os>-<arch>
 name: Release
 
 on:
@@ -70,7 +70,7 @@ jobs:
             - id: meta
               uses: docker/metadata-action@v6
               with:
-                  images: ghcr.io/netgen/ngcheck
+                  images: ghcr.io/netgen/ngchecks
                   tags: |
                       type=semver,pattern={{version}},value=v${{ inputs.version }}
                       type=semver,pattern={{major}}.{{minor}},value=v${{ inputs.version }}
@@ -110,7 +110,7 @@ jobs:
               run: |
                   tag=latest
                   case "$VERSION" in *-*) tag=next ;; esac
-                  for package in dist/npm/ngcheck-*; do
+                  for package in dist/npm/ngchecks-*; do
                       npm publish "$package" --access public --tag "$tag"
                   done
-                  npm publish dist/npm/ngcheck --access public --tag "$tag"
+                  npm publish dist/npm/ngchecks --access public --tag "$tag"

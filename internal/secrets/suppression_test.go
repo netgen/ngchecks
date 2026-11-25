@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/secrets"
+	"github.com/netgen/ngchecks/internal/secrets"
 )
 
 func TestSuppressionsFromDiff(t *testing.T) {

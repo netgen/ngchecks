@@ -8,21 +8,21 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/netgen/ngcheck/internal/git"
+	"github.com/netgen/ngchecks/internal/git"
 )
 
-// Scanner runs Betterleaks with the Netgen ruleset, the repository's own config
+// Scanner runs Betterleaks with the built-in ruleset, the repository's own config
 // (.betterleaks.toml) and its ignore file (.betterleaksignore).
 type Scanner struct {
 	// Binary is the Betterleaks executable.
 	Binary string
-	// Ruleset is the Netgen ruleset (TOML) the project config extends.
+	// Ruleset is the built-in ruleset (TOML) the project config extends.
 	Ruleset []byte
 }
 
 // Scan reports potential secrets in the target part of the repository.
 func (s Scanner) Scan(repositoryRoot string, target Target) ([]Finding, error) {
-	workDir, err := os.MkdirTemp("", "ngcheck-")
+	workDir, err := os.MkdirTemp("", "ngchecks-")
 	if err != nil {
 		return nil, err
 	}

@@ -7,9 +7,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/betterleaks"
-	"github.com/netgen/ngcheck/internal/cli"
-	"github.com/netgen/ngcheck/internal/testutil"
+	"github.com/netgen/ngchecks/internal/betterleaks"
+	"github.com/netgen/ngchecks/internal/cli"
+	"github.com/netgen/ngchecks/internal/testutil"
 )
 
 type result struct {
@@ -17,7 +17,7 @@ type result struct {
 	stdout, stderr string
 }
 
-// run executes ngcheck with only the given environment variables (plus the Betterleaks binary).
+// run executes ngchecks with only the given environment variables (plus the Betterleaks binary).
 func run(t *testing.T, environment map[string]string, args ...string) result {
 	t.Helper()
 
@@ -102,7 +102,7 @@ func TestWriteIgnoreAcceptsCurrentFindings(t *testing.T) {
 	}
 
 	ignore, _ := os.ReadFile(filepath.Join(repo.Root, ".betterleaksignore"))
-	assertContains(t, string(ignore), "# Accepted with ngcheck secrets --write-ignore on ", "\nconfig.php:github-pat:1\n")
+	assertContains(t, string(ignore), "# Accepted with ngchecks secrets --write-ignore on ", "\nconfig.php:github-pat:1\n")
 
 	if r := run(t, nil, "secrets", repo.Root); r.exitCode != cli.ExitOK {
 		t.Errorf("expected exit code 0 after accepting, got %d\n%s", r.exitCode, r.stdout)
@@ -118,7 +118,7 @@ func TestScansPullRequestCommitsOnGitHub(t *testing.T) {
 	clone.Write("leak.php", leak()).
 		Write(".betterleaksignore", "abc123:other.php:generic-api-key:1\n").
 		Commit("Feature")
-	// A single-branch CI checkout has no base ref: ngcheck fetches it.
+	// A single-branch CI checkout has no base ref: ngchecks fetches it.
 	clone.Git("update-ref", "-d", "refs/remotes/origin/master")
 
 	r := run(t, map[string]string{"GITHUB_ACTIONS": "true", "GITHUB_BASE_REF": "master"}, "secrets", clone.Root)
@@ -192,7 +192,7 @@ func TestVersion(t *testing.T) {
 	if r.exitCode != cli.ExitOK {
 		t.Fatalf("expected exit code 0, got %d\n%s", r.exitCode, r.stderr)
 	}
-	assertContains(t, r.stdout, "ngcheck 1.2.3\nbetterleaks ")
+	assertContains(t, r.stdout, "ngchecks 1.2.3\nbetterleaks ")
 }
 
 func TestInit(t *testing.T) {
@@ -205,8 +205,8 @@ func TestInit(t *testing.T) {
 		t.Fatalf("expected exit code 0, got %d\n%s%s", r.exitCode, r.stdout, r.stderr)
 	}
 	assertContains(t, r.stdout,
-		"Setting up ngcheck in "+repo.Root,
-		`changed  .husky/pre-commit: added "ngcheck secrets --staged"`,
+		"Setting up ngchecks in "+repo.Root,
+		`changed  .husky/pre-commit: added "ngchecks secrets --staged"`,
 		"changed  .github/workflows/secrets.yml: created the pull request check",
 		"todo     Husky is not active in this clone",
 		"\n    npx husky\n",
@@ -214,7 +214,7 @@ func TestInit(t *testing.T) {
 	)
 
 	r = run(t, nil, "init", repo.Root)
-	assertContains(t, r.stdout, "ok       .husky/pre-commit: already runs ngcheck")
+	assertContains(t, r.stdout, "ok       .husky/pre-commit: already runs ngchecks")
 	if strings.Contains(r.stdout, "git add") {
 		t.Errorf("nothing should change on the second run:\n%s", r.stdout)
 	}

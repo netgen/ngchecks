@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/netgen/ngcheck/internal/report"
-	"github.com/netgen/ngcheck/internal/secrets"
+	"github.com/netgen/ngchecks/internal/report"
+	"github.com/netgen/ngchecks/internal/secrets"
 )
 
 func TestGitHubAnnotationEscapesValues(t *testing.T) {

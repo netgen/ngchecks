@@ -1,4 +1,4 @@
-// Package git runs the git commands ngcheck needs.
+// Package git runs the git commands ngchecks needs.
 package git
 
 import (

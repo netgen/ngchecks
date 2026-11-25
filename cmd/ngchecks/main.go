@@ -1,10 +1,10 @@
-// Command ngcheck runs Netgen project checks, such as scanning for leaked secrets.
+// Command ngchecks runs project checks for git hooks and CI, such as scanning for leaked secrets.
 package main
 
 import (
 	"os"
 
-	"github.com/netgen/ngcheck/internal/cli"
+	"github.com/netgen/ngchecks/internal/cli"
 )
 
 // version is set at build time: -ldflags "-X main.version=1.2.3".

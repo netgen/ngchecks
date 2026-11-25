@@ -9,15 +9,15 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/netgen/ngcheck/internal/betterleaks"
-	"github.com/netgen/ngcheck/internal/ci"
-	"github.com/netgen/ngcheck/internal/git"
-	"github.com/netgen/ngcheck/internal/report"
-	"github.com/netgen/ngcheck/internal/secrets"
-	"github.com/netgen/ngcheck/ruleset"
+	"github.com/netgen/ngchecks/internal/betterleaks"
+	"github.com/netgen/ngchecks/internal/ci"
+	"github.com/netgen/ngchecks/internal/git"
+	"github.com/netgen/ngchecks/internal/report"
+	"github.com/netgen/ngchecks/internal/secrets"
+	"github.com/netgen/ngchecks/ruleset"
 )
 
-const secretsUsage = `Usage: ngcheck secrets [options] [path]
+const secretsUsage = `Usage: ngchecks secrets [options] [path]
 
 Scans the git repository containing path (default: current directory) for leaked
 secrets: passwords, API keys, tokens, private keys, credentials in DSNs...
@@ -135,7 +135,7 @@ func runSecrets(args []string, stdout, stderr io.Writer, getenv func(string) str
 	printFindings(stdout, context, target, findings, options.verbose)
 
 	if options.writeIgnore {
-		added, err := secrets.AcceptFindings(repository.Root, findings, "Accepted with ngcheck secrets --write-ignore on "+time.Now().Format(time.DateOnly))
+		added, err := secrets.AcceptFindings(repository.Root, findings, "Accepted with ngchecks secrets --write-ignore on "+time.Now().Format(time.DateOnly))
 		if err != nil {
 			return fail(stderr, err)
 		}
@@ -144,7 +144,7 @@ func runSecrets(args []string, stdout, stderr io.Writer, getenv func(string) str
 		return ExitOK
 	}
 
-	accept := `, or accept the finding with "ngcheck secrets --write-ignore"`
+	accept := `, or accept the finding with "ngchecks secrets --write-ignore"`
 	if target.Mode == secrets.StagedChanges {
 		accept = ""
 	}
@@ -286,7 +286,7 @@ func parseInterleaved(flags *flag.FlagSet, args []string) ([]string, error) {
 }
 
 func fail(stderr io.Writer, err error) int {
-	fmt.Fprintf(stderr, "ngcheck: error: %v\n", err)
+	fmt.Fprintf(stderr, "ngchecks: error: %v\n", err)
 
 	return ExitError
 }

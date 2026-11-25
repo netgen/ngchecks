@@ -3,14 +3,14 @@ BETTERLEAKS_DIR := .cache/betterleaks/$(shell scripts/platform.sh)
 
 .PHONY: build test lint betterleaks release npm docker clean
 
-## build: build ngcheck for this machine into bin/, next to the pinned Betterleaks
+## build: build ngchecks for this machine into bin/, next to the pinned Betterleaks
 build: betterleaks
-	go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o bin/ngcheck ./cmd/ngcheck
+	go build -trimpath -ldflags "-s -w -X main.version=$(VERSION)" -o bin/ngchecks ./cmd/ngchecks
 	cp $(BETTERLEAKS_DIR)/betterleaks bin/betterleaks
 
 ## test: run all tests against the pinned Betterleaks
 test: betterleaks
-	NGCHECK_BETTERLEAKS=$(CURDIR)/$(BETTERLEAKS_DIR)/betterleaks go test ./...
+	NGCHECKS_BETTERLEAKS=$(CURDIR)/$(BETTERLEAKS_DIR)/betterleaks go test ./...
 
 ## lint: check formatting and run go vet
 lint:
@@ -31,7 +31,7 @@ npm:
 
 ## docker: build the Docker image for this machine
 docker:
-	docker build --build-arg VERSION=$(VERSION) -t ghcr.io/netgen/ngcheck:$(VERSION) .
+	docker build --build-arg VERSION=$(VERSION) -t ghcr.io/netgen/ngchecks:$(VERSION) .
 
 clean:
 	rm -rf bin dist .cache

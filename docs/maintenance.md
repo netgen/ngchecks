@@ -1,4 +1,4 @@
-# Maintaining ngcheck
+# Maintaining ngchecks
 
 - [How the pieces fit together](#how-the-pieces-fit-together)
 - [One-time setup](#one-time-setup)
@@ -16,39 +16,39 @@ This repository is the only source. A release publishes, from one version number
 
 | Artifact | Where | Built from | Consumed by |
 |---|---|---|---|
-| `ngcheck_<version>_<os>_<arch>.tar.gz` + `checksums.txt` | GitHub release `v<version>` | `scripts/build-release.sh` | the Composer plugin |
-| `netgen/ngcheck` | Packagist (reads the `v<version>` tag of this repository) | `composer.json`, `composer/` | Symfony / PHP projects |
-| `@netgen/ngcheck` + `@netgen/ngcheck-<os>-<arch>` | npm | `npm/`, `scripts/build-npm.sh` | Node projects |
-| `ghcr.io/netgen/ngcheck:<version>`, `:<major>.<minor>`, `:<major>` | GitHub Container Registry | `Dockerfile` | CI pipelines |
+| `ngchecks_<version>_<os>_<arch>.tar.gz` + `checksums.txt` | GitHub release `v<version>` | `scripts/build-release.sh` | the Composer plugin |
+| `netgen/ngchecks` | Packagist (reads the `v<version>` tag of this repository) | `composer.json`, `composer/` | PHP projects |
+| `@netgen/ngchecks` + `@netgen/ngchecks-<os>-<arch>` | npm | `npm/`, `scripts/build-npm.sh` | Node projects |
+| `ghcr.io/netgen/ngchecks:<version>`, `:<major>.<minor>`, `:<major>` | GitHub Container Registry | `Dockerfile` | CI pipelines |
 
 Every archive, npm platform package and image contains the same two binaries:
-`ngcheck` (built from `cmd/` and `internal/`, with `ruleset/betterleaks.toml` embedded)
+`ngchecks` (built from `cmd/` and `internal/`, with `ruleset/betterleaks.toml` embedded)
 and the Betterleaks release pinned in `betterleaks.env` (downloaded from the Betterleaks
 GitHub release and verified against the checksums in `betterleaks.env`).
 
 How each package gets the binaries:
 
 - **Composer**: the package on Packagist contains only the plugin (`composer/`) and the
-  `vendor/bin/ngcheck` wrapper (everything else is `export-ignore`d in `.gitattributes`).
+  `vendor/bin/ngchecks` wrapper (everything else is `export-ignore`d in `.gitattributes`).
   After `composer install` / `composer update`, the plugin downloads the GitHub release
   archive of the installed version for the current platform into
-  `vendor/netgen/ngcheck/var/<os>_<arch>/`, after checking it against the release's
+  `vendor/netgen/ngchecks/var/<os>_<arch>/`, after checking it against the release's
   `checksums.txt`. That's why the GitHub release is created together with the tag:
   Packagist can't offer a version before its binaries exist.
   After `composer require` / `composer update` in an interactive terminal, when the package
   was not in `vendor/` before (not listed in `vendor/composer/installed.json` when the plugin
-  is activated), the plugin also runs `ngcheck init`. It never does on `composer install`,
+  is activated), the plugin also runs `ngchecks init`. It never does on `composer install`,
   so a fresh clone or a CI install never changes project files.
-- **npm**: `@netgen/ngcheck` contains a small Node launcher (`npm/bin/ngcheck.js`) and lists
+- **npm**: `@netgen/ngchecks` contains a small Node launcher (`npm/bin/ngchecks.js`) and lists
   the four platform packages as optional dependencies, which the package managers
   install only for the matching `os`/`cpu`. No install scripts are involved, so it works
   with pnpm and Yarn setups that block them.
-- **Docker**: the image compiles ngcheck from source and downloads Betterleaks, both
+- **Docker**: the image compiles ngchecks from source and downloads Betterleaks, both
   for the target architecture.
 
 Projects run it from their hook managers with the same command: a CaptainHook action
-`vendor/bin/ngcheck secrets --staged`, or `ngcheck secrets --staged` in `.husky/pre-commit`.
-`ngcheck init` (`internal/setup/`) writes these and the GitHub Actions workflow, and prints
+`vendor/bin/ngchecks secrets --staged`, or `ngchecks secrets --staged` in `.husky/pre-commit`.
+`ngchecks init` (`internal/setup/`) writes these and the GitHub Actions workflow, and prints
 the Bitbucket and GitLab steps.
 
 ## One-time setup
@@ -61,7 +61,7 @@ on its own:
 | GitHub release and tag | none | the workflow's automatic `GITHUB_TOKEN` (`contents: write`) |
 | ghcr.io Docker image | none | the workflow's automatic `GITHUB_TOKEN` (`packages: write`) |
 | Packagist | none | Packagist reads the public repository itself; a GitHub webhook tells it about new tags |
-| npm | none | [trusted publishing](https://docs.npmjs.com/trusted-publishers): each npm package trusts the `release.yml` workflow of `netgen/ngcheck` (OIDC, `id-token: write`) |
+| npm | none | [trusted publishing](https://docs.npmjs.com/trusted-publishers): each npm package trusts the `release.yml` workflow of `netgen/ngchecks` (OIDC, `id-token: write`) |
 
 npm trusted publishing can only be configured for packages that already exist, so the
 first npm release is published by hand (step 5). npm no longer offers long-lived tokens
@@ -69,20 +69,15 @@ that could do this from CI instead: tokens that skip 2FA lose direct publishing 
 
 ### 1. GitHub repository
 
-1. Create the repository `netgen/ngcheck` (public; Packagist and npm provenance need a
-   public repository) and push:
+The repository is [github.com/netgen/ngchecks](https://github.com/netgen/ngchecks). It must
+stay public: Packagist and npm provenance need a public repository.
 
-   ```sh
-   git remote add origin git@github.com:netgen/ngcheck.git
-   git push -u origin master
-   ```
-
-2. Settings → Actions → General → Workflow permissions: the workflows declare the
+1. Settings → Actions → General → Workflow permissions: the workflows declare the
    permissions they need per job (`contents: write`, `packages: write`, `id-token: write`),
    which works with the default "Read repository contents" setting. Check that the
    organization allows members to create public packages (organization Settings →
    Packages), for the Docker image.
-3. Protect `master` and make the CI checks required.
+2. Protect `master` and make the CI checks required.
 
 ### 2. Packagist
 
@@ -90,7 +85,7 @@ The `netgen` vendor name is protected on Packagist: only maintainers of an exist
 `netgen/*` package can submit packages under it.
 
 1. Log in to [packagist.org](https://packagist.org) with such an account, preferably
-   through GitHub ("Login with GitHub"), and submit `https://github.com/netgen/ngcheck`.
+   through GitHub ("Login with GitHub"), and submit `https://github.com/netgen/ngchecks`.
 2. Make Packagist update on every push, so a release is available within a minute:
    - with a GitHub login: make sure the Packagist application has access to the
      `netgen` organization (GitHub → Settings → Applications → Authorized OAuth Apps →
@@ -110,8 +105,8 @@ authentication enabled. Nothing is configured in GitHub.
 
 ### 4. Docker image visibility
 
-The first release creates the `ngcheck` container package in the `netgen` organization,
-private by default. On GitHub: organization → Packages → `ngcheck` → Package settings →
+The first release creates the `ngchecks` container package in the `netgen` organization,
+private by default. On GitHub: organization → Packages → `ngchecks` → Package settings →
 Change visibility → Public. Pipelines on Bitbucket and GitLab pull it without credentials.
 
 ### 5. First release and npm trusted publishing
@@ -121,18 +116,18 @@ Change visibility → Public. Pipelines on Bitbucket and GitLab pull it without 
 2. Publish the npm packages of that release by hand, from the release archives:
 
    ```sh
-   gh release download v1.0.0-rc.1 --repo netgen/ngcheck --dir dist
+   gh release download v1.0.0-rc.1 --repo netgen/ngchecks --dir dist
    scripts/build-npm.sh 1.0.0-rc.1
    npm login
-   for package in dist/npm/ngcheck-* dist/npm/ngcheck; do
+   for package in dist/npm/ngchecks-* dist/npm/ngchecks; do
        npm publish "$package" --access public --tag next   # asks for a 2FA code
    done
    ```
 
-   The platform packages go first, `dist/npm/ngcheck` (the launcher) last.
-3. For each of the five packages (`@netgen/ngcheck`, `@netgen/ngcheck-darwin-arm64`,
+   The platform packages go first, `dist/npm/ngchecks` (the launcher) last.
+3. For each of the five packages (`@netgen/ngchecks`, `@netgen/ngchecks-darwin-arm64`,
    `-darwin-x64`, `-linux-arm64`, `-linux-x64`): npmjs.com → the package → Settings →
-   Trusted publishing → GitHub Actions, with organization `netgen`, repository `ngcheck`,
+   Trusted publishing → GitHub Actions, with organization `netgen`, repository `ngchecks`,
    workflow filename `release.yml`, no environment, and allow `npm publish`.
 4. Within 2 days (npm expires trusted publisher configurations that were never used),
    release the next version, e.g. `1.0.0-rc.2` or `1.0.0`, and check that the npm job
@@ -140,14 +135,10 @@ Change visibility → Public. Pipelines on Bitbucket and GitLab pull it without 
 5. Recommended: in the same package settings, Publishing access → "Require two-factor
    authentication and disallow tokens", so only the workflow and 2FA-authenticated
    maintainers can publish.
-6. Try the release candidate on one Symfony and one Node project, following
+6. Try the release candidate on a PHP and a Node project, following
    [installation.md](installation.md). Composer installs pre-releases with
-   `composer require --dev netgen/ngcheck:^1.0@rc`, npm with `@netgen/ngcheck@next`.
+   `composer require --dev netgen/ngchecks:^1.0@rc`, npm with `@netgen/ngchecks@next`.
 7. Release `1.0.0`.
-8. Add `netgen/ngcheck` (`require-dev`) and `"netgen/ngcheck": true` (`config.allow-plugins`)
-   to `composer.json` in `netgen/media-site`, and the `vendor/bin/ngcheck secrets --staged`
-   action to the `pre-commit` hook in its `captainhook.template.json` (running
-   `vendor/bin/ngcheck init` there does it), so new projects get it.
 
 ## Releasing
 
@@ -171,10 +162,10 @@ Steps:
    3. builds and pushes the Docker image for amd64 and arm64;
    4. builds and publishes the npm packages, platform packages first.
 4. Check: the GitHub release has 4 archives and `checksums.txt`; Packagist lists the
-   version; `npm view @netgen/ngcheck version`; `docker pull ghcr.io/netgen/ngcheck:1.2.3`.
+   version; `npm view @netgen/ngchecks version`; `docker pull ghcr.io/netgen/ngchecks:1.2.3`.
 
-Projects pick up the release with `composer update netgen/ngcheck` or
-`npm update @netgen/ngcheck`; CI images on `:1` get it on their next run.
+Projects pick up the release with `composer update netgen/ngchecks` or
+`npm update @netgen/ngchecks`; CI images on `:1` get it on their next run.
 
 If a release job fails:
 
@@ -219,7 +210,7 @@ Betterleaks release exists. Read its release notes, then:
 
 A **new Betterleaks major version** (v2 is in release candidates) changes the CLI
 (`--staged` and `--log-opts` are replaced, the JUnit and SARIF reports and baselines are
-removed), the config format and the ignore file format. Plan it as an ngcheck major
+removed), the config format and the ignore file format. Plan it as an ngchecks major
 release: update the arguments in `internal/secrets/scanner.go`, the report parsing in
 `internal/secrets/finding.go`, the ruleset and the tests.
 
@@ -251,7 +242,7 @@ Go version, update the `go` line in `go.mod` and the `golang` image in the `Dock
 
 ## Adding a check
 
-For example `ngcheck cve`:
+For example `ngchecks cve`:
 
 1. Implement it in a new package under `internal/` and register the command in
    `internal/cli/cli.go`, following the exit codes `0` passed, `1` problems found, `2` error.
@@ -269,25 +260,25 @@ Docker for the image.
 ```sh
 make test                  # downloads the pinned Betterleaks into .cache/, runs all tests
 make lint                  # gofmt + go vet
-make build                 # bin/ngcheck + bin/betterleaks for this machine
-bin/ngcheck secrets --history ../some-project
-make release VERSION=1.2.3 # dist/ngcheck_1.2.3_<platform>.tar.gz + checksums.txt
+make build                 # bin/ngchecks + bin/betterleaks for this machine
+bin/ngchecks secrets --history ../some-project
+make release VERSION=1.2.3 # dist/ngchecks_1.2.3_<platform>.tar.gz + checksums.txt
 make npm VERSION=1.2.3     # dist/npm/*, needs the archives
 make docker VERSION=1.2.3  # image for this machine
 ```
 
-`go run ./cmd/ngcheck` needs `NGCHECK_BETTERLEAKS=.cache/betterleaks/<os>_<arch>/betterleaks`,
-because the binary is looked up next to the ngcheck executable.
+`go run ./cmd/ngchecks` needs `NGCHECKS_BETTERLEAKS=.cache/betterleaks/<os>_<arch>/betterleaks`,
+because the binary is looked up next to the ngchecks executable.
 
 Testing the distributions without publishing:
 
 - **Composer**: serve the `dist/` archives in a `v<version>/` directory over HTTP, require the
   package from a [path repository](https://getcomposer.org/doc/05-repositories.md#path) with
-  `"versions": {"netgen/ngcheck": "<version>"}`, and run `composer require` with
-  `NGCHECK_DOWNLOAD_URL=http://<host>` (set `config.secure-http` to `false` for plain HTTP).
-  `NGCHECK_VERSION` makes the plugin download another release, e.g. for a development version.
-  The plugin only runs `ngcheck init` in an interactive terminal; from a script, use
-  `printf 'y\n' | script -qec "composer require --dev netgen/ngcheck:<version>" /dev/null`
+  `"versions": {"netgen/ngchecks": "<version>"}`, and run `composer require` with
+  `NGCHECKS_DOWNLOAD_URL=http://<host>` (set `config.secure-http` to `false` for plain HTTP).
+  `NGCHECKS_VERSION` makes the plugin download another release, e.g. for a development version.
+  The plugin only runs `ngchecks init` in an interactive terminal; from a script, use
+  `printf 'y\n' | script -qec "composer require --dev netgen/ngchecks:<version>" /dev/null`
   (Linux `script`) to get one and answer the trust prompt.
 - **npm**: publish `dist/npm/*` to a local registry such as
   [Verdaccio](https://verdaccio.org) (raise its `max_body_size`, the platform packages are
@@ -297,16 +288,16 @@ Testing the distributions without publishing:
 
 | Path | Content |
 |---|---|
-| `cmd/ngcheck/` | entry point |
+| `cmd/ngchecks/` | entry point |
 | `internal/cli/` | command line parsing and output |
 | `internal/secrets/` | the secrets scan: Betterleaks invocation, config composition, ignore file, suppressions |
-| `internal/setup/` | `ngcheck init`: CaptainHook / Husky hooks and CI pipelines of a project |
+| `internal/setup/` | `ngchecks init`: CaptainHook / Husky hooks and CI pipelines of a project |
 | `internal/git/`, `internal/ci/`, `internal/report/` | git commands, CI platform detection, JUnit / JSON / GitHub annotation output |
 | `internal/betterleaks/` | locating the bundled Betterleaks binary |
-| `ruleset/betterleaks.toml` | the Netgen ruleset, embedded in the binary |
+| `ruleset/betterleaks.toml` | the built-in ruleset, embedded in the binary |
 | `betterleaks.env` | pinned Betterleaks version and checksums |
-| `composer.json`, `composer/` | the Composer package: plugin and `vendor/bin/ngcheck` wrapper |
-| `npm/` | the `@netgen/ngcheck` package (launcher); platform packages are generated |
+| `composer.json`, `composer/` | the Composer package: plugin and `vendor/bin/ngchecks` wrapper |
+| `npm/` | the `@netgen/ngchecks` package (launcher); platform packages are generated |
 | `scripts/` | fetching Betterleaks, building release archives and npm packages, updating Betterleaks |
 | `Dockerfile` | the CI image |
 | `.github/workflows/` | CI, release, Betterleaks update check |
