@@ -115,10 +115,6 @@ func TestAddsActionToCaptainHookConfigsKeepingTheirContent(t *testing.T) {
                 "action": "vendor/bin/ngcheck secrets --staged"
             },
 `, 1)
-	expected = strings.Replace(expected, `"excluded_files": ["/^deploy.*/"],`, `"excluded_files": [
-                        "/^deploy.*/"
-                    ],`, 1)
-
 	if got := read(t, repo, "captainhook.json"); got != expected {
 		t.Errorf("unexpected captainhook.json:\n%s", got)
 	}
@@ -326,5 +322,37 @@ func TestRejectsInvalidCaptainHookConfig(t *testing.T) {
 				t.Error("captainhook.json must not be changed")
 			}
 		})
+	}
+}
+
+// netgen/media-site projects commit captainhook.template.json and symlink captainhook.json to it.
+func TestEditsTheTemplateCaptainHookConfigIsLinkedTo(t *testing.T) {
+	repo := testutil.NewRepo(t)
+	repo.Write("captainhook.template.json", `{"pre-commit": {"enabled": true, "actions": []}}`)
+
+	if err := os.Symlink("captainhook.template.json", filepath.Join(repo.Root, "captainhook.json")); err != nil {
+		t.Fatal(err)
+	}
+
+	steps := run(t, repo)
+
+	assertStatus(t, steps, "captainhook.template.json", setup.Changed)
+	if _, ok := find(steps, "captainhook.json"); ok {
+		t.Errorf("the symlink must not be reported as changed: %+v", steps)
+	}
+	if info, err := os.Lstat(filepath.Join(repo.Root, "captainhook.json")); err != nil || info.Mode()&os.ModeSymlink == 0 {
+		t.Error("captainhook.json must stay a symlink")
+	}
+	if !strings.Contains(read(t, repo, "captainhook.template.json"), "vendor/bin/ngcheck secrets --staged") {
+		t.Error("the template was not changed")
+	}
+}
+
+func TestExplainsHowToLinkTheTemplate(t *testing.T) {
+	repo := testutil.NewRepo(t)
+	repo.Write("captainhook.template.json", "{}\n")
+
+	if steps := run(t, repo); !hasTodo(steps, "ln -s captainhook.template.json captainhook.json") {
+		t.Errorf("expected a todo to link the template, got %+v", steps)
 	}
 }

@@ -67,13 +67,25 @@ func Run(repository *git.Repository) ([]Step, error) {
 
 func (s *setup) hooks() error {
 	captainHook := false
+	edited := map[string]bool{}
 
 	for _, file := range []string{"captainhook.json", "captainhook.template.json"} {
-		if s.exists(file) {
-			captainHook = true
-			if err := s.addCaptainHookAction(file); err != nil {
-				return err
-			}
+		if !s.exists(file) {
+			continue
+		}
+
+		captainHook = true
+
+		// netgen/media-site projects symlink captainhook.json to the committed template:
+		// edit and report the file the link points to, once.
+		target := s.resolve(file)
+		if edited[target] {
+			continue
+		}
+		edited[target] = true
+
+		if err := s.addCaptainHookAction(target); err != nil {
+			return err
 		}
 	}
 
@@ -85,8 +97,12 @@ func (s *setup) hooks() error {
 		}
 	}
 
-	if s.exists("captainhook.json") {
+	switch {
+	case s.exists("captainhook.json"):
 		s.checkCaptainHookInstalled()
+	case s.exists("captainhook.template.json"):
+		s.add(Todo, "", "CaptainHook reads captainhook.json, which does not exist in this clone. Link it to the template and install the git hooks:",
+			"ln -s captainhook.template.json captainhook.json\nvendor/bin/captainhook install --force")
 	}
 
 	husky := s.isDir(".husky")
@@ -144,15 +160,15 @@ func (s *setup) addCaptainHookAction(file string) error {
 		config.set("pre-commit", hook)
 	}
 
-	actions := []any{}
+	actions := &jsonArray{}
 	if value, ok := hook.get("actions"); ok {
-		if actions, ok = value.([]any); !ok {
+		if actions, ok = value.(*jsonArray); !ok {
 			return fmt.Errorf(`%s: "pre-commit.actions" must be an array`, file)
 		}
 	}
 
 	configured := false
-	for _, action := range actions {
+	for _, action := range actions.items {
 		if object, ok := action.(*jsonObject); ok {
 			if command, ok := object.values["action"].(string); ok && strings.Contains(command, marker) {
 				configured = true
@@ -172,8 +188,8 @@ func (s *setup) addCaptainHookAction(file string) error {
 	if !enabled {
 		hook.set("enabled", true)
 
-		if len(actions) > 0 && !configured {
-			changes = append(changes, fmt.Sprintf("enabled the pre-commit hook (it also runs its %d other action(s))", len(actions)))
+		if len(actions.items) > 0 && !configured {
+			changes = append(changes, fmt.Sprintf("enabled the pre-commit hook (it also runs its %d other action(s))", len(actions.items)))
 		} else {
 			changes = append(changes, "enabled the pre-commit hook")
 		}
@@ -182,7 +198,8 @@ func (s *setup) addCaptainHookAction(file string) error {
 	if !configured {
 		action := newJSONObject()
 		action.set("action", CaptainHookAction)
-		hook.set("actions", append([]any{action}, actions...))
+		actions.items = append([]any{action}, actions.items...)
+		hook.set("actions", actions)
 		changes = append(changes, fmt.Sprintf("added %q to the pre-commit hook", CaptainHookAction))
 	}
 
@@ -327,6 +344,26 @@ func (s *setup) checkPipeline(file, snippet string) {
 
 func (s *setup) add(status Status, file, message, snippet string) {
 	s.steps = append(s.steps, Step{Status: status, File: file, Message: message, Snippet: snippet})
+}
+
+// resolve returns the file a symlink points to, relative to the root, or the file itself.
+func (s *setup) resolve(file string) string {
+	target, err := filepath.EvalSymlinks(s.path(file))
+	if err != nil {
+		return file
+	}
+
+	root, err := filepath.EvalSymlinks(s.repository.Root)
+	if err != nil {
+		return file
+	}
+
+	relative, err := filepath.Rel(root, target)
+	if err != nil || strings.HasPrefix(relative, "..") {
+		return file
+	}
+
+	return filepath.ToSlash(relative)
 }
 
 func (s *setup) path(file string) string {

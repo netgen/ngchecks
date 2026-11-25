@@ -9,11 +9,19 @@ import (
 	"strings"
 )
 
-// jsonObject is a JSON object that keeps its key order, so config files edited by
-// ngcheck init only change where something was added.
+// The JSON types below keep the key order and the one-line formatting of the decoded
+// document, so config files edited by ngcheck init only change where something was added.
+
 type jsonObject struct {
 	keys   []string
 	values map[string]any
+	// inline objects were written on one line
+	inline bool
+}
+
+type jsonArray struct {
+	items  []any
+	inline bool
 }
 
 func newJSONObject() *jsonObject {
@@ -35,12 +43,12 @@ func (o *jsonObject) set(key string, value any) {
 	o.values[key] = value
 }
 
-// decodeJSON parses a document into *jsonObject, []any, string, json.Number, bool and nil values.
+// decodeJSON parses a document into *jsonObject, *jsonArray, string, json.Number, bool and nil values.
 func decodeJSON(data []byte) (any, error) {
 	decoder := json.NewDecoder(bytes.NewReader(data))
 	decoder.UseNumber()
 
-	value, err := decodeJSONValue(decoder)
+	value, err := decodeJSONValue(decoder, data)
 	if err != nil {
 		return nil, err
 	}
@@ -52,7 +60,7 @@ func decodeJSON(data []byte) (any, error) {
 	return value, nil
 }
 
-func decodeJSONValue(decoder *json.Decoder) (any, error) {
+func decodeJSONValue(decoder *json.Decoder, data []byte) (any, error) {
 	token, err := decoder.Token()
 	if err != nil {
 		return nil, err
@@ -62,6 +70,9 @@ func decodeJSONValue(decoder *json.Decoder) (any, error) {
 	if !ok {
 		return token, nil
 	}
+
+	// The offset right after the opening delimiter.
+	start := decoder.InputOffset()
 
 	switch delimiter {
 	case '{':
@@ -73,7 +84,7 @@ func decodeJSONValue(decoder *json.Decoder) (any, error) {
 				return nil, err
 			}
 
-			value, err := decodeJSONValue(decoder)
+			value, err := decodeJSONValue(decoder, data)
 			if err != nil {
 				return nil, err
 			}
@@ -81,30 +92,40 @@ func decodeJSONValue(decoder *json.Decoder) (any, error) {
 			object.set(keyToken.(string), value)
 		}
 
-		_, err = decoder.Token()
+		if _, err := decoder.Token(); err != nil {
+			return nil, err
+		}
 
-		return object, err
+		object.inline = !bytes.ContainsRune(data[start:decoder.InputOffset()], '\n')
+
+		return object, nil
 	case '[':
-		array := []any{}
+		array := &jsonArray{}
 
 		for decoder.More() {
-			value, err := decodeJSONValue(decoder)
+			value, err := decodeJSONValue(decoder, data)
 			if err != nil {
 				return nil, err
 			}
 
-			array = append(array, value)
+			array.items = append(array.items, value)
 		}
 
-		_, err = decoder.Token()
+		if _, err := decoder.Token(); err != nil {
+			return nil, err
+		}
 
-		return array, err
+		array.inline = !bytes.ContainsRune(data[start:decoder.InputOffset()], '\n')
+
+		return array, nil
 	default:
 		return nil, fmt.Errorf("unexpected %q", delimiter)
 	}
 }
 
-// encodeJSON writes a document with 4-space indentation, the CaptainHook and Composer style.
+// encodeJSON writes a document with 4-space indentation, the CaptainHook and Composer
+// style. Objects and arrays decoded from one line stay on one line, as long as all
+// their values do.
 func encodeJSON(value any) ([]byte, error) {
 	var buffer bytes.Buffer
 
@@ -118,52 +139,28 @@ func encodeJSON(value any) ([]byte, error) {
 }
 
 func writeJSONValue(buffer *bytes.Buffer, value any, depth int) error {
-	indent := strings.Repeat("    ", depth+1)
-	closingIndent := strings.Repeat("    ", depth)
-
 	switch v := value.(type) {
 	case *jsonObject:
-		if len(v.keys) == 0 {
-			buffer.WriteString("{}")
-			return nil
+		entries := make([]func() error, 0, len(v.keys))
+		for _, key := range v.keys {
+			entries = append(entries, func() error {
+				writeJSONString(buffer, key)
+				buffer.WriteString(": ")
+
+				return writeJSONValue(buffer, v.values[key], depth+1)
+			})
 		}
 
-		buffer.WriteString("{\n")
-		for i, key := range v.keys {
-			buffer.WriteString(indent)
-			writeJSONString(buffer, key)
-			buffer.WriteString(": ")
-
-			if err := writeJSONValue(buffer, v.values[key], depth+1); err != nil {
-				return err
-			}
-
-			if i < len(v.keys)-1 {
-				buffer.WriteByte(',')
-			}
-			buffer.WriteByte('\n')
-		}
-		buffer.WriteString(closingIndent + "}")
-	case []any:
-		if len(v) == 0 {
-			buffer.WriteString("[]")
-			return nil
+		return writeJSONContainer(buffer, "{", "}", entries, isInline(v), depth)
+	case *jsonArray:
+		entries := make([]func() error, 0, len(v.items))
+		for _, item := range v.items {
+			entries = append(entries, func() error {
+				return writeJSONValue(buffer, item, depth+1)
+			})
 		}
 
-		buffer.WriteString("[\n")
-		for i, item := range v {
-			buffer.WriteString(indent)
-
-			if err := writeJSONValue(buffer, item, depth+1); err != nil {
-				return err
-			}
-
-			if i < len(v)-1 {
-				buffer.WriteByte(',')
-			}
-			buffer.WriteByte('\n')
-		}
-		buffer.WriteString(closingIndent + "]")
+		return writeJSONContainer(buffer, "[", "]", entries, isInline(v), depth)
 	case string:
 		writeJSONString(buffer, v)
 	case json.Number:
@@ -177,6 +174,67 @@ func writeJSONValue(buffer *bytes.Buffer, value any, depth int) error {
 	}
 
 	return nil
+}
+
+func writeJSONContainer(buffer *bytes.Buffer, open, close string, entries []func() error, inline bool, depth int) error {
+	buffer.WriteString(open)
+
+	if len(entries) == 0 {
+		buffer.WriteString(close)
+		return nil
+	}
+
+	separator := ", "
+	indent := ""
+	if !inline {
+		separator = ","
+		indent = "\n" + strings.Repeat("    ", depth+1)
+	}
+
+	for i, entry := range entries {
+		if i > 0 {
+			buffer.WriteString(separator)
+		}
+		buffer.WriteString(indent)
+
+		if err := entry(); err != nil {
+			return err
+		}
+	}
+
+	if !inline {
+		buffer.WriteString("\n" + strings.Repeat("    ", depth))
+	}
+	buffer.WriteString(close)
+
+	return nil
+}
+
+// isInline reports whether a value can be written on one line: scalars, and containers
+// decoded from one line whose values are all inline too.
+func isInline(value any) bool {
+	switch v := value.(type) {
+	case *jsonObject:
+		if !v.inline {
+			return false
+		}
+		for _, key := range v.keys {
+			if !isInline(v.values[key]) {
+				return false
+			}
+		}
+	case *jsonArray:
+		if !v.inline {
+			return false
+		}
+		for _, item := range v.items {
+			if !isInline(item) {
+				return false
+			}
+		}
+	}
+
+	return true
 }
 
 func writeJSONString(buffer *bytes.Buffer, value string) {

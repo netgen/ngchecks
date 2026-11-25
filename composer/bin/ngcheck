@@ -19,7 +19,8 @@ binary="$package_dir/var/${os}_${arch}/ngcheck"
 
 if [ ! -x "$binary" ]; then
     echo "ngcheck: no binary for ${os}_${arch} in $package_dir/var." >&2
-    echo "Run \"composer install\" on this machine; the netgen/ngcheck plugin must be allowed in composer.json (config.allow-plugins)." >&2
+    echo "Run \"composer install\" on this machine. If the netgen/ngcheck plugin is not allowed yet, run first:" >&2
+    echo "    composer config allow-plugins.netgen/ngcheck true" >&2
     exit 2
 fi
 

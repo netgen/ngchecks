@@ -18,6 +18,7 @@ Every project gets two layers of protection:
 - [Adopting an existing project](#adopting-an-existing-project)
 - [Configuration](#configuration)
 - [Troubleshooting](#troubleshooting)
+- [Removing ngcheck](#removing-ngcheck)
 
 Supported platforms: macOS and Linux, x64 and arm64. On Windows, use WSL.
 
@@ -30,7 +31,8 @@ composer require --dev netgen/ngcheck
 ```
 
 Answer `y` when Composer asks whether to trust `netgen/ngcheck`. The plugin then
-downloads ngcheck and runs `ngcheck init`.
+downloads ngcheck and runs `ngcheck init`. Answered `n`, or ran it with `--no-interaction`?
+See [Symfony / PHP projects](#symfony--php-projects-composer--captainhook).
 
 **Node project:**
 
@@ -65,34 +67,46 @@ Review and commit the changes:
 | It finds | It does |
 |---|---|
 | `captainhook.json`, `captainhook.template.json` | adds the `vendor/bin/ngcheck secrets --staged` action at the top of the `pre-commit` hook and enables the hook; the rest of the file stays as it is |
-| CaptainHook installed (`vendor/bin/captainhook`) but no `captainhook.json` | creates `captainhook.json` with the action |
+| `captainhook.json` is a symlink to `captainhook.template.json` (`netgen/media-site` setup) | edits the template, the symlink stays |
+| `captainhook.template.json` but no `captainhook.json` | edits the template and tells you to link `captainhook.json` to it and install the git hooks |
+| CaptainHook installed (`vendor/bin/captainhook`) but no config at all | creates `captainhook.json` with the action |
 | CaptainHook git hooks not installed in the clone | tells you to run `vendor/bin/captainhook install --force` |
-| `.husky/` | adds `ngcheck secrets --staged` at the top of `.husky/pre-commit` (`yarn ngcheck ...` with Yarn Plug'n'Play) |
+| `.husky/` | adds `ngcheck secrets --staged` at the top of `.husky/pre-commit`, creating it if needed (`yarn ngcheck ...` with Yarn Plug'n'Play) |
 | Husky not active in the clone | tells you to run `npx husky` |
-| no hook manager | tells you how to install CaptainHook (PHP) or Husky (Node) and to run `ngcheck init` again |
+| both CaptainHook and Husky | sets up both; keep only one hook manager, see [below](#projects-with-both-composer-and-npm) |
+| no hook manager, `composer.json` | tells you to install CaptainHook and run `ngcheck init` again |
+| no hook manager, `package.json` | tells you to set up Husky and run `ngcheck init` again |
+| no hook manager, neither | prints the command to put in the pre-commit git hook |
 | `.github/workflows/` or a GitHub `origin` remote | creates `.github/workflows/secrets.yml`, unless a workflow already runs ngcheck |
-| `bitbucket-pipelines.yml` or a Bitbucket `origin` remote | prints the step to add (it does not edit existing pipelines) |
-| `.gitlab-ci.yml` or a GitLab `origin` remote | prints the job to add |
+| `bitbucket-pipelines.yml` or a Bitbucket `origin` remote | prints the step to add, or the whole file if there is none (it never edits pipelines) |
+| `.gitlab-ci.yml` or a GitLab `origin` remote | prints the job to add, or the whole file if there is none |
+| no CI configuration and no known `origin` remote | points to [CI pipelines](#ci-pipelines) |
 
 It changes nothing that is already set up, so it is safe to run again, e.g. after
-setting up Husky or a pipeline.
+setting up Husky or a pipeline. It stops with an error when the directory is not a git
+repository or a CaptainHook config is not valid JSON; fix that and run it again.
 
 ## Symfony / PHP projects (Composer + CaptainHook)
 
 The Composer package `netgen/ngcheck` is a Composer plugin: after `composer install`
 and `composer update` it downloads the ngcheck binaries of its version for the current
 platform (verified against the release checksums) and exposes them as `vendor/bin/ngcheck`.
-When `composer require` adds it to the project in an interactive terminal, it also runs
-`ngcheck init`. It never runs `init` on `composer install`, so a hook removed on purpose
-does not come back.
+When `composer require` (or `composer update`) installs it into `vendor/` for the first
+time in an interactive terminal, it also runs `ngcheck init`. It never runs `init` on
+`composer install`, so cloning a project, installing in CI or reinstalling `vendor/`
+never changes project files, and a hook removed on purpose does not come back.
 
-Composer only runs plugins listed in `config.allow-plugins` of `composer.json`. An
-interactive `composer require` asks and adds it. For non-interactive installs (scripts,
-CI), allow it first and run `init` yourself:
+Composer only runs plugins listed in `config.allow-plugins` of `composer.json`:
+
+- An interactive `composer require` asks whether to trust `netgen/ngcheck`. Answering `y`
+  adds it as `true`; answering `n` adds it as `false`, and nothing is downloaded or set up.
+- A non-interactive `composer require` fails when the plugin is not allowed yet.
+
+In both cases, and for scripts in general, allow it, install and set up the project yourself:
 
 ```sh
 composer config allow-plugins.netgen/ngcheck true
-composer require --dev --no-interaction netgen/ngcheck
+composer require --dev --no-interaction netgen/ngcheck   # or "composer install" if already required
 vendor/bin/ngcheck init
 ```
 
@@ -333,9 +347,23 @@ The rule IDs are in [ruleset/betterleaks.toml](../ruleset/betterleaks.toml) and 
 
 | Message | Fix |
 |---|---|
-| `ngcheck: no binary for linux_x64 in .../vendor/netgen/ngcheck/var` | Run `composer install` on this machine or container. Check that `netgen/ngcheck` is in `config.allow-plugins` of `composer.json`. |
+| `ngcheck: no binary for linux_x64 in .../vendor/netgen/ngcheck/var` | Run `composer install` on this machine or container. If `netgen/ngcheck` is missing from `config.allow-plugins` or set to `false` (the trust question was answered `n`), run `composer config allow-plugins.netgen/ngcheck true`, `composer install` and `vendor/bin/ngcheck init`. |
+| `netgen/ngcheck contains a Composer plugin which is blocked by your allow-plugins config` | Run `composer config allow-plugins.netgen/ngcheck true` and the command again. With `--no-interaction`, also run `vendor/bin/ngcheck init` afterwards. |
+| `netgen/ngcheck: setting up the project failed` during `composer require` | Fix the error printed above it (see the next rows) and run `vendor/bin/ngcheck init`. |
+| `ngcheck: error: "." is not inside a git repository` | Run it from inside the project's git clone; for a new project, `git init` first. |
+| `ngcheck: error: captainhook.json: ...` | The CaptainHook config is not valid JSON or has an unexpected structure; fix it and run `ngcheck init` again. |
 | `netgen/ngcheck: dev-master is a development version and has no release binaries` | Require a tagged version (`^1.0`), not a branch. |
 | `ngcheck: @netgen/ngcheck-linux-x64 is not installed` | Reinstall `node_modules` on this machine, without `--omit=optional`. Don't copy `node_modules` between host and container. |
 | `cannot find the pull request base "origin/master"` / `no common ancestor` | Use a full clone in the CI job (`fetch-depth: 0`, `clone: depth: full`, `GIT_DEPTH: 0`). |
 | `--write-ignore cannot be used with --staged` | For code that is not committed yet, use a `betterleaks:allow` comment. |
 | A finding you are sure is wrong | Use a `betterleaks:allow` comment and report it to the ngcheck maintainers, so the ruleset can be fixed for everyone. |
+
+## Removing ngcheck
+
+1. Remove the `vendor/bin/ngcheck secrets --staged` action from `captainhook.json` /
+   `captainhook.template.json`, or the `ngcheck secrets --staged` line from `.husky/pre-commit`.
+2. Delete `.github/workflows/secrets.yml` or the ngcheck step of the pipeline.
+3. `composer remove --dev netgen/ngcheck` (and remove it from `config.allow-plugins`) or
+   `npm uninstall @netgen/ngcheck`.
+
+`composer install` never adds the hook back.
