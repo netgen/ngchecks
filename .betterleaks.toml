@@ -1,0 +1,6 @@
+# Secret scanning config for this repository, extends the Netgen ruleset.
+# Tests and the ruleset contain fake credentials to exercise the rules.
+
+prefilter = '''
+matchesAny(attributes["path"], [`_test\.go$`, `^ruleset/betterleaks\.toml$`])
+'''

@@ -1,0 +1,16 @@
+# Betterleaks is not covered: it is pinned in betterleaks.env and updated with
+# scripts/update-betterleaks.sh, see docs/maintenance.md.
+version: 2
+updates:
+    - package-ecosystem: gomod
+      directory: /
+      schedule:
+          interval: weekly
+    - package-ecosystem: docker
+      directory: /
+      schedule:
+          interval: weekly
+    - package-ecosystem: github-actions
+      directory: /
+      schedule:
+          interval: weekly

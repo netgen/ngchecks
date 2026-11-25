@@ -1,0 +1,16 @@
+# Keep the Composer package (Packagist dist archive) to what the plugin needs.
+/.dockerignore export-ignore
+/.gitattributes export-ignore
+/.github export-ignore
+/.betterleaks.toml export-ignore
+/betterleaks.env export-ignore
+/cmd export-ignore
+/docs export-ignore
+/Dockerfile export-ignore
+/go.mod export-ignore
+/go.sum export-ignore
+/internal export-ignore
+/Makefile export-ignore
+/npm export-ignore
+/ruleset export-ignore
+/scripts export-ignore

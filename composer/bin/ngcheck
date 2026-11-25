@@ -1,0 +1,26 @@
+#!/bin/sh
+# Runs the ngcheck binary installed by the netgen/ngcheck Composer plugin into var/<platform>/.
+set -eu
+
+case "$(uname -s)" in
+    Darwin) os=darwin ;;
+    Linux) os=linux ;;
+    *) os=$(uname -s) ;;
+esac
+
+case "$(uname -m)" in
+    x86_64 | amd64) arch=x64 ;;
+    arm64 | aarch64) arch=arm64 ;;
+    *) arch=$(uname -m) ;;
+esac
+
+package_dir=$(CDPATH='' cd -- "$(dirname -- "$0")/../.." && pwd)
+binary="$package_dir/var/${os}_${arch}/ngcheck"
+
+if [ ! -x "$binary" ]; then
+    echo "ngcheck: no binary for ${os}_${arch} in $package_dir/var." >&2
+    echo "Run \"composer install\" on this machine; the netgen/ngcheck plugin must be allowed in composer.json (config.allow-plugins)." >&2
+    exit 2
+fi
+
+exec "$binary" "$@"

@@ -1,0 +1,41 @@
+{
+    "name": "netgen/ngcheck",
+    "description": "Netgen project checks: secret leak protection for git hooks and CI, powered by Betterleaks",
+    "type": "composer-plugin",
+    "license": "MIT",
+    "keywords": [
+        "secrets",
+        "security",
+        "betterleaks",
+        "gitleaks",
+        "captainhook",
+        "netgen"
+    ],
+    "homepage": "https://github.com/netgen/ngcheck",
+    "authors": [
+        {
+            "name": "Netgen",
+            "homepage": "https://netgen.io"
+        }
+    ],
+    "require": {
+        "php": ">=8.1",
+        "ext-phar": "*",
+        "ext-zlib": "*",
+        "composer-plugin-api": "^2.2"
+    },
+    "require-dev": {
+        "composer/composer": "^2.5"
+    },
+    "autoload": {
+        "psr-4": {
+            "Netgen\\Ngcheck\\Composer\\": "composer/src/"
+        }
+    },
+    "bin": [
+        "composer/bin/ngcheck"
+    ],
+    "extra": {
+        "class": "Netgen\\Ngcheck\\Composer\\Plugin"
+    }
+}

@@ -1,0 +1,6 @@
+/bin/
+/dist/
+/.cache/
+/var/
+/vendor/
+/composer.lock

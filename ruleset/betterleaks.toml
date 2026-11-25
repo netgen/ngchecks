@@ -1,0 +1,212 @@
+# Netgen secret leak protection ruleset, embedded into the ngcheck binary.
+#
+# Extends the Betterleaks built-in rules (pinned together with the binary, see
+# betterleaks.env) with rules for the stacks used at Netgen: Symfony / Ibexa
+# and Node.
+#
+# A global `prefilter` or `filter` replaces the one of the config it extends,
+# so both start with a verbatim copy of the built-in ones. The ruleset tests
+# fail when the copies drift from the pinned Betterleaks version.
+#
+# Projects add their own rules and exclusions in `.betterleaks.toml` in the
+# repository root, see docs/installation.md.
+
+title = 'Netgen secret leak protection'
+minVersion = 'v8.25.0'
+betterleaksMinVersion = 'v1.10.0'
+
+prefilter = '''
+(
+matchesAny(attributes["path"], [
+  `gitleaks\.toml`,
+  `(?i)\.(?:bmp|gif|jpe?g|png|svg|tiff?)$`,
+  `(?i)\.(?:eot|[ot]tf|woff2?)$`,
+  `(?i)\.(?:docx?|xlsx?|pdf|bin|socket|vsidx|v2|suo|wsuo|dll|pdb|exe|gltf)$`,
+  `go\.(?:mod|sum|work(?:\.sum)?)$`,
+  `(?:^|/)vendor/modules\.txt$`,
+  `(?:^|/)vendor/(?:github\.com|golang\.org/x|google\.golang\.org|gopkg\.in|istio\.io|k8s\.io|sigs\.k8s\.io)(?:/.*)?$`,
+  `(?:^|/)gradlew(?:\.bat)?$`,
+  `(?:^|/)gradle\.lockfile$`,
+  `(?:^|/)mvnw(?:\.cmd)?$`,
+  `(?:^|/)\.mvn/wrapper/MavenWrapperDownloader\.java$`,
+  `(?:^|/)node_modules(?:/.*)?$`,
+  `(?:^|/)(?:bun\.lockb?|deno\.lock|npm-shrinkwrap\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock)$`,
+  `(?:^|/)bower_components(?:/.*)?$`,
+  `(?:^|/)(?:angular|bootstrap|jquery(?:-?ui)?|plotly|swagger-?ui)[a-zA-Z0-9.-]*(?:\.min)?\.js(?:\.map)?$`,
+  `(?:^|/)javascript\.json$`,
+  `(?:^|/)(?:Pipfile|poetry)\.lock$`,
+  `(?i)(?:^|/)(?:v?env|virtualenv)/lib(?:64)?(?:/.*)?$`,
+  `(?i)(?:^|/)(?:lib(?:64)?/python[23](?:\.\d{1,2})+|python/[23](?:\.\d{1,2})+/lib(?:64)?)(?:/.*)?$`,
+  `(?i)(?:^|/)[a-z0-9_.]+-[0-9.]+\.dist-info(?:/.+)?$`,
+  `(?:^|/)vendor/(?:bundle|ruby)(?:/.*?)?$`,
+  `\.gem$`,
+  `verification-metadata\.xml`,
+  `Database.refactorlog`,
+  `(?:^|/)\.git$`
+])
+)
+|| matchesAny(attributes["path"], [
+  `(?:^|/)\.betterleaks(?:ignore|\.toml)$`,
+  `(?:^|/)vendor/`,
+  `(?:^|/)(?:composer|symfony)\.lock$`,
+  `(?:^|/)public/(?:build|bundles)/`,
+  `(?i)\.min\.(?:js|css)$`,
+  `(?i)\.(?:js|css)\.map$`
+])
+'''
+
+filter = '''
+(
+(matchesAny(finding["secret"], [
+  `(?i)^true|false|null$`,
+  `^(?i:a+|b+|c+|d+|e+|f+|g+|h+|i+|j+|k+|l+|m+|n+|o+|p+|q+|r+|s+|t+|u+|v+|w+|x+|y+|z+|\*+|\.+)$`,
+  `^\$(?:\d+|{\d+})$`,
+  `^\$(?:[A-Z_]+|[a-z_]+)$`,
+  `^\${(?:[A-Z_]+|[a-z_]+)}$`,
+  `^\{\{[ \t]*[\w ().|]+[ \t]*}}$`,
+  `^\$\{\{[ \t]*(?:(?:env|github|secrets|vars)(?:\.[A-Za-z]\w+)+[\w "'&./=|]*)[ \t]*}}$`,
+  `^%(?:[A-Z_]+|[a-z_]+)%$`,
+  `^%[+\-# 0]?[bcdeEfFgGoOpqstTUvxX]$`,
+  `^\{\d{0,2}}$`,
+  `^@(?:[A-Z_]+|[a-z_]+)@$`,
+  `^/Users/(?i)[a-z0-9]+/[\w .-/]+$`,
+  `^/(?:bin|etc|home|opt|tmp|usr|var)/[\w ./-]+$`
+]) || containsAny(finding["secret"], [
+  "abcdefghijklmnopqrstuvwxyz",
+  "014df517-39d1-4453-b7b3-9930c563627c"
+]))
+)
+|| matchesAny(finding["secret"], [
+  `^%[\w.-]+%$`,
+  `^%env\([\w:.-]+\)%$`,
+  `(?i)^(?:pass(?:word|wd)?|secret|change_?me|root|app|user(?:name)?|test|admin|guest|example|db_?pass(?:word)?|your_?\w+|my_?password|pwd|symfony|ibexa|null|docker|mysql|postgres|redis|rabbitmq)$`
+])
+|| containsAny(finding["secret"], [
+  "!ChangeMe!",
+  "ThisTokenIsNotSoSecretChangeIt",
+  "$ecretf0rt3st"
+])
+'''
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = 'symfony-secrets-decrypt-key'
+description = 'Symfony secrets vault decryption key committed. Anyone holding it can decrypt every secret of that environment.'
+path = '''(?:^|/)config/secrets/[^/]+/[^/]+\.decrypt\.private\.php$'''
+confidence = 'high'
+
+[[rules]]
+id = 'symfony-decryption-secret'
+description = 'Symfony secrets vault decryption key (SYMFONY_DECRYPTION_SECRET) committed.'
+regex = '''SYMFONY_DECRYPTION_SECRET[\s'"]{0,3}[=:][ \t'"]{0,3}([A-Za-z0-9+/_-]{40,}={0,2})'''
+keywords = ['symfony_decryption_secret']
+confidence = 'high'
+
+[[rules]]
+id = 'dotenv-local-file'
+description = 'Local dotenv file (.env.local, .env.<environment>.local) committed. These files hold machine-specific secrets and must stay ignored by git.'
+path = '''(?:^|/)\.env(?:\.[\w-]+)?\.local$'''
+confidence = 'medium'
+
+[[rules]]
+id = 'dotenv-secret'
+description = 'Secret-looking variable (APP_SECRET, *_PASSWORD, *_PASSPHRASE, *_SECRET, *_TOKEN, *_API_KEY) with a value committed to a dotenv file. Keep committed values empty and set real ones in .env.local, real environment variables or the Symfony secrets vault.'
+path = '''(?:^|/)(?:\.env(?:\.[\w-]+)*|[\w-]+\.env)$'''
+regex = '''(?im)^[ \t]*(?:export[ \t]+)?[A-Z0-9_]*(?:SECRET|PASSWORD|PASSWD|PASSPHRASE|TOKEN|API_?KEY|PRIVATE_?KEY|ACCESS_?KEY)[A-Z0-9_]*[ \t]*=[ \t]*['"]?([^\s'"#]{6,})'''
+keywords = ['secret', 'passw', 'passphrase', 'token', 'key']
+confidence = 'medium'
+filter = '''
+matchesAny(attributes["path"], [`(?:^|/)\.env\.test$`])
+|| matchesAny(finding["secret"], [
+  `^\d+$`,
+  `^(?:%[\w.-]+%|\.{0,2})/`,
+  `^%env\(`,
+  `^[<\[{$]`
+])
+|| entropy(finding["secret"]) < 2.0
+'''
+
+[[rules]]
+id = 'dsn-credentials'
+description = 'Connection string (DSN/URL) with an embedded password, e.g. DATABASE_URL, MAILER_DSN, MESSENGER_TRANSPORT_DSN, REDIS_URL or a repository URL.'
+regex = '''(?i)\b(?:mysql|mariadb|pgsql|postgres(?:ql)?|redis|rediss|valkey|memcached|amqps?|smtps?|ftps?|sftp|ldaps?|elasticsearch|opensearch|solr|https?|sendgrid|mailgun|mailjet|postmark|brevo|sendinblue|mandrill|ses|mailersend|resend|scaleway|infobip|azure)(?:\+[a-z]+)?://[^\s:/@'"\x60]*:([^\s/@'"\x60]{3,})@[^\s/'"\x60]+'''
+keywords = ['://']
+confidence = 'medium'
+filter = '''
+matchesAny(finding["match"], [`(?i)^mailgun\+(?:api|https)://`])
+|| matchesAny(finding["secret"], [`^[<\[{$%]`])
+|| entropy(finding["secret"]) < 2.0
+'''
+
+[[rules]]
+id = 'symfony-mailer-dsn-api-key'
+description = 'Symfony Mailer DSN with an embedded provider API key.'
+regex = '''(?i)\b(?:(?:sendgrid|mailgun|brevo|sendinblue|postmark|mandrill|resend|infobip|mailersend|mailomat|mailpace|sweego|postal|ahasend|mailtrap)\+(?:api|https)|(?:sendgrid|postmark)\+smtp)://([^\s:@/'"\x60]{8,})(?::[^\s@/'"\x60]*)?@'''
+keywords = ['+api://', '+https://', '+smtp://']
+confidence = 'high'
+filter = '''
+matchesAny(finding["secret"], [
+  `^[<\[{$%]`,
+  `(?i)^(?:key|id|api_?key|api_?token|access_?key|token|public_?key|server_?token)$`
+])
+|| entropy(finding["secret"]) < 3.0
+'''
+
+[[rules]]
+id = 'cloudinary-url'
+description = 'Cloudinary URL (CLOUDINARY_URL) with an embedded API secret.'
+regex = '''\bcloudinary://\d{6,}:([A-Za-z0-9_-]{16,})@[\w-]+'''
+keywords = ['cloudinary://']
+confidence = 'high'
+
+[[rules]]
+id = 'composer-auth-credentials'
+description = 'Composer auth.json with repository credentials (e.g. updates.ibexa.co, private Packagist, Bitbucket OAuth) committed.'
+path = '''(?:^|/)auth\.json$'''
+regex = '''"(?:password|consumer-secret)"\s*:\s*"([^"\s]{6,})"'''
+keywords = ['password', 'consumer-secret']
+confidence = 'high'
+filter = '''
+matchesAny(finding["secret"], [`^[<\[{$%]`])
+'''
+
+[[rules]]
+id = 'composer-auth-env-credentials'
+description = 'COMPOSER_AUTH value with repository credentials committed (e.g. in CI or Docker configuration).'
+regex = '''(?i)COMPOSER_AUTH[\s\S]{0,300}?\\?"(?:password|consumer-secret)\\?"\s*:\s*\\?"([^"\\\s]{6,})\\?"'''
+keywords = ['composer_auth']
+confidence = 'high'
+filter = '''
+matchesAny(finding["secret"], [`^[<\[{$%]`])
+'''
+
+[[rules]]
+id = 'deployer-secret'
+description = 'Secret value hardcoded in Deployer configuration.'
+path = '''(?i)(?:^|/)deploy(?:er)?(?:\.php|/.+\.php)$'''
+regex = '''(?i)\bset\(\s*['"][\w.-]*(?:pass(?:word)?|secret|token|api_?key|private_?key)[\w.-]*['"]\s*,\s*['"]([^'"\s]{6,})['"]'''
+keywords = ['pass', 'secret', 'token', 'key']
+confidence = 'medium'
+filter = '''
+matchesAny(finding["secret"], [`^[<\[{$%]`])
+|| entropy(finding["secret"]) < 2.0
+'''
+
+[[rules]]
+id = 'private-key-file'
+description = 'Private key or credential store committed (SSH private key, PuTTY key, Java keystore, KeePass database, .htpasswd).'
+path = '''(?i)(?:^|/)(?:id_(?:rsa|dsa|ecdsa|ed25519)|[^/]+\.(?:ppk|jks|keystore|kdbx)|\.htpasswd)$'''
+confidence = 'high'
+
+[[rules]]
+id = 'npm-registry-auth'
+description = 'npm / Yarn registry credentials (_authToken, _auth, _password, npmAuthToken, npmAuthIdent) committed in .npmrc or .yarnrc.yml.'
+path = '''(?:^|/)(?:\.npmrc|\.yarnrc\.yml)$'''
+regex = '''(?i)(?:_authToken|_auth|_password|npmAuthToken|npmAuthIdent)['"]?[ \t]*[=:][ \t]*['"]?([^\s'"]{8,})'''
+keywords = ['_auth', '_password', 'npmauth']
+confidence = 'high'
+filter = '''
+matchesAny(finding["secret"], [`^\$\{`])
+'''

@@ -1,0 +1,39 @@
+# Opens an issue when a newer Betterleaks release exists than the one pinned in
+# betterleaks.env. Updating is manual, see docs/maintenance.md.
+name: Betterleaks update check
+
+on:
+    schedule:
+        - cron: '0 6 * * 1'
+    workflow_dispatch: ~
+
+permissions:
+    contents: read
+    issues: write
+
+jobs:
+    check:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v7
+            - env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  . ./betterleaks.env
+                  latest=$(gh release view --repo betterleaks/betterleaks --json tagName --jq .tagName)
+                  latest=${latest#v}
+
+                  if [ "$latest" = "$BETTERLEAKS_VERSION" ]; then
+                      echo "Betterleaks $BETTERLEAKS_VERSION is the latest release."
+                      exit 0
+                  fi
+
+                  title="Betterleaks $latest is available (pinned: $BETTERLEAKS_VERSION)"
+                  if [ -n "$(gh issue list --state open --search "in:title \"$title\"" --json number --jq '.[].number')" ]; then
+                      echo "Issue already open: $title"
+                      exit 0
+                  fi
+
+                  gh issue create --title "$title" --body "Release notes: https://github.com/betterleaks/betterleaks/releases/tag/v$latest
+
+                  Follow \"Updating Betterleaks\" in docs/maintenance.md. A new major version changes the CLI and the config format, plan it separately."

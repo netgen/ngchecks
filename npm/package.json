@@ -1,0 +1,36 @@
+{
+    "name": "@netgen/ngcheck",
+    "version": "0.0.0-dev",
+    "description": "Netgen project checks: secret leak protection for git hooks and CI, powered by Betterleaks",
+    "keywords": [
+        "secrets",
+        "security",
+        "betterleaks",
+        "gitleaks",
+        "husky",
+        "pre-commit"
+    ],
+    "homepage": "https://github.com/netgen/ngcheck",
+    "bugs": "https://github.com/netgen/ngcheck/issues",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/netgen/ngcheck.git"
+    },
+    "license": "MIT",
+    "author": "Netgen (https://netgen.io)",
+    "bin": {
+        "ngcheck": "bin/ngcheck.js"
+    },
+    "files": [
+        "bin/ngcheck.js"
+    ],
+    "engines": {
+        "node": ">=18"
+    },
+    "optionalDependencies": {
+        "@netgen/ngcheck-darwin-arm64": "0.0.0-dev",
+        "@netgen/ngcheck-darwin-x64": "0.0.0-dev",
+        "@netgen/ngcheck-linux-arm64": "0.0.0-dev",
+        "@netgen/ngcheck-linux-x64": "0.0.0-dev"
+    }
+}
